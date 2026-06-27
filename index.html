@@ -1394,10 +1394,20 @@ function renderCatatanList(){
     return '<div style="background:#F8F9FA;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:3px solid '+col+'">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
       +'<span class="chip" style="background:'+col+'15;color:'+col+';font-size:10px;font-weight:700">'+bagianLabels[c.bagian]+'</span>'
-      +'<button onclick="deleteCatatan('+i+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:14px;padding:0">×</button>'
-      +'</div>'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<button onclick="editCatatan('+i+')" style="background:none;border:none;color:#1565C0;cursor:pointer;font-size:12px;font-weight:600;padding:2px 6px">Edit</button>'
+      +'<button onclick="deleteCatatan('+i+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:14px;padding:2px 6px">×</button>'
+      +'</div></div>'
+      +'<div id="catatan-view-'+i+'">'
       +'<div style="font-size:11px;color:#999;margin-bottom:4px">Catatan asli: <i>'+c.original+'</i></div>'
       +'<div style="font-size:12.5px;color:#333;line-height:1.6">'+(c.refined||'<span style="color:#F57F17">Memproses...</span>')+'</div>'
+      +'</div>'
+      +'<div id="catatan-edit-'+i+'" style="display:none">'
+      +'<textarea id="catatan-editbox-'+i+'" rows="2" style="width:100%;margin-bottom:8px;resize:vertical;min-height:42px">'+c.original+'</textarea>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+      +'<button onclick="cancelEditCatatan('+i+')" class="btn btn-outline" style="padding:5px 14px;font-size:12px">Batal</button>'
+      +'<button onclick="saveEditCatatan('+i+')" class="btn btn-blue" style="padding:5px 14px;font-size:12px">Simpan & Refine</button>'
+      +'</div></div>'
       +'</div>';
   }).join('');
 }
@@ -1407,6 +1417,51 @@ function deleteCatatan(idx){
   saveCatatanList(list);
   renderCatatanList();
   renderLaporan();
+}
+function editCatatan(idx){
+  document.getElementById('catatan-view-'+idx).style.display='none';
+  document.getElementById('catatan-edit-'+idx).style.display='block';
+}
+function cancelEditCatatan(idx){
+  document.getElementById('catatan-view-'+idx).style.display='block';
+  document.getElementById('catatan-edit-'+idx).style.display='none';
+}
+async function saveEditCatatan(idx){
+  var input=document.getElementById('catatan-editbox-'+idx).value.trim();
+  if(!input){ return; }
+  var list=getCatatanList();
+  var entry=list[idx]; if(!entry) return;
+  entry.original=input;
+  entry.refined='';
+  saveCatatanList(list);
+  renderCatatanList();
+  try{
+    var bagianLabels={operasional:'Operasional Kas',marketing:'Marketing / Funding',lending:'AO Lending',remedial:'Remedial'};
+    var refined=await callGPT(
+      'Kamu adalah penulis laporan resmi perbankan BPR. Tugasmu: sempurnakan catatan singkat berikut menjadi 1-2 kalimat deskriptif profesional untuk laporan bulanan kantor kas.\n\n'
+      +'Bagian: '+bagianLabels[entry.bagian]+'\n'
+      +'Catatan asli: "'+input+'"\n\n'
+      +'ATURAN:\n'
+      +'- Gunakan bahasa Indonesia formal dan profesional\n'
+      +'- Pertahankan semua fakta/informasi dari catatan asli\n'
+      +'- Tambahkan konteks perbankan yang relevan jika perlu\n'
+      +'- Jangan tambahkan data angka yang tidak ada di catatan asli\n'
+      +'- Output HANYA kalimat hasilnya saja, tanpa penjelasan atau label\n'
+      +'- JANGAN gunakan markdown, code block, atau tag HTML'
+    );
+    refined=refined.replace(/```[^`]*```/g,'').replace(/^["']|["']$/g,'').replace(/<[^>]*>/g,'').trim();
+    list=getCatatanList();
+    if(list[idx]){ list[idx].refined=refined; }
+    saveCatatanList(list);
+    renderCatatanList();
+    localStorage.removeItem('sgm_ai_'+currentMonth);
+    renderLaporan();
+  }catch(e){
+    list=getCatatanList();
+    if(list[idx]){ list[idx].refined=input; }
+    saveCatatanList(list);
+    renderCatatanList();
+  }
 }
 async function submitCatatan(){
   var bagian=document.getElementById('catatanBagian').value;
