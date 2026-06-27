@@ -431,28 +431,30 @@ tr:hover td{background:#FFF8F8}
 
       <!-- CATATAN KEPALA KAS -->
       <div class="card" style="margin-bottom:16px;border-left:4px solid #1565C0">
-        <div style="font-size:14px;font-weight:700;color:#1565C0;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        <div style="font-size:14px;font-weight:700;color:#1565C0;margin-bottom:4px;display:flex;align-items:center;gap:8px">
           <svg width="18" height="18" fill="none" stroke="#1565C0" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           Catatan Kepala Kas
         </div>
-        <div style="font-size:11.5px;color:#888;margin-bottom:10px;line-height:1.5">Tambahkan catatan singkat (bisa dengan kata-kata seadanya). Sistem akan otomatis menyempurnakan menjadi kalimat profesional untuk laporan.</div>
-        <div style="display:flex;gap:10px;margin-bottom:10px;align-items:end">
-          <div style="flex:0 0 180px">
-            <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:4px;display:block">BAGIAN</label>
-            <select id="catatanBagian" style="width:100%;padding:8px 10px;border:1.5px solid #1565C0;border-radius:8px;font-size:13px;font-weight:600;color:#1565C0">
+        <div style="font-size:11.5px;color:#888;margin-bottom:14px;line-height:1.5">Tambahkan catatan singkat (bisa dengan kata-kata seadanya). Sistem akan otomatis menyempurnakan menjadi kalimat profesional untuk laporan.</div>
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:5px;display:block">BAGIAN</label>
+            <select id="catatanBagian" style="width:100%;padding:9px 10px;border:1.5px solid #1565C0;border-radius:8px;font-size:13px;font-weight:600;color:#1565C0">
               <option value="operasional">Operasional</option>
               <option value="marketing">Marketing / Funding</option>
               <option value="lending">AO Lending</option>
               <option value="remedial">Remedial</option>
             </select>
           </div>
-          <div style="flex:1">
-            <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:4px;display:block">CATATAN</label>
-            <textarea id="catatanInput" rows="2" placeholder="Tulis catatan singkat, misal: nasabah naik karena ada program tabungan berhadiah..." style="resize:vertical;min-height:42px"></textarea>
+          <div>
+            <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:5px;display:block">CATATAN</label>
+            <textarea id="catatanInput" rows="1" placeholder="Tulis catatan singkat, misal: nasabah naik karena ada program tabungan berhadiah..." style="resize:vertical;min-height:38px"></textarea>
           </div>
-          <button class="btn btn-blue" onclick="submitCatatan()" id="btnCatatan" style="white-space:nowrap;align-self:end">
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+          <button class="btn btn-blue" onclick="submitCatatan()" id="btnCatatan">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Tambah
+            Tambah Catatan
           </button>
         </div>
         <div id="catatanList"></div>
