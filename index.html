@@ -831,6 +831,7 @@ function init(){
     localStorage.setItem('sgm_bpr',JSON.stringify(db));
     renderAll();
   },function(e){console.error('Firestore listen error:',e);});
+  initCatatanSync();
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');navigator.serviceWorker.addEventListener('controllerchange',function(){window.location.reload();});}
 }
 
@@ -1382,7 +1383,21 @@ function getCatatanKey(){ return 'sgm_catatan_'+currentMonth; }
 function getCatatanList(){
   try{ return JSON.parse(localStorage.getItem(getCatatanKey())||'[]'); }catch(e){ return []; }
 }
-function saveCatatanList(list){ localStorage.setItem(getCatatanKey(),JSON.stringify(list)); }
+function saveCatatanList(list){
+  localStorage.setItem(getCatatanKey(),JSON.stringify(list));
+  fsDB.collection('sgm_catatan').doc(currentMonth).set({items:list})
+    .catch(function(e){console.error('Catatan sync error:',e);});
+}
+function initCatatanSync(){
+  fsDB.collection('sgm_catatan').onSnapshot(function(snap){
+    snap.forEach(function(doc){
+      var data=doc.data();
+      if(data.items) localStorage.setItem('sgm_catatan_'+doc.id,JSON.stringify(data.items));
+    });
+    renderCatatanList();
+    if(!_aiRunning&&!_aiDone) renderLaporan();
+  },function(e){console.error('Catatan listen error:',e);});
+}
 function renderCatatanList(){
   var el=document.getElementById('catatanList'); if(!el) return;
   var list=getCatatanList();

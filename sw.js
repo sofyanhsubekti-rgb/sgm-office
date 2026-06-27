@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sgm-office-v57';
+const CACHE_NAME = 'sgm-office-v58';
 const ASSETS = ['./', './index.html', './manifest.json'];
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))); self.clients.claim(); });
