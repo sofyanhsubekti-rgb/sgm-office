@@ -1,0 +1,1873 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#C62828"/>
+<title>SGM Office – BPR Bank Surya Yudha</title>
+<link rel="manifest" href="manifest.json"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#F0F2F5;color:#1a1a2e;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#f0f0f0}
+::-webkit-scrollbar-thumb{background:#C62828;border-radius:4px}
+
+/* SIDEBAR */
+.sidebar{background:linear-gradient(180deg,#C62828 0%,#8B0000 60%,#1565C0 100%);width:240px;min-height:100vh;position:fixed;left:0;top:0;z-index:40;display:flex;flex-direction:column;box-shadow:4px 0 20px rgba(198,40,40,.25);transition:transform .3s}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:rgba(255,255,255,.75);font-size:13.5px;font-weight:500;margin-bottom:2px;transition:all .2s}
+.nav-item:hover{background:rgba(255,255,255,.15);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.25);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav-item svg{flex-shrink:0;width:18px;height:18px}
+.nav-sep{height:1px;background:rgba(255,255,255,.2);margin:8px 4px}
+.nav-cat{font-size:10px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:.1em;padding:4px 6px 2px;text-transform:uppercase}
+
+/* MAIN */
+.main-wrap{margin-left:240px;min-height:100vh}
+.topbar{background:#fff;border-bottom:2px solid #C62828;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:30;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.page-area{padding:24px}
+
+/* CARDS */
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #e8e8e8}
+.card:hover{box-shadow:0 4px 20px rgba(0,0,0,.1)}
+
+/* KPI CARDS */
+.kpi{border-radius:14px;padding:18px 20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.kpi::after{content:'';position:absolute;top:-15px;right:-15px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.12)}
+
+/* BADGES */
+.mom-up{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.mom-down{background:#ffebee;color:#c62828;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.mom-flat{background:#f5f5f5;color:#757575;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+
+/* BUTTONS */
+.btn{padding:8px 18px;border-radius:9px;border:none;cursor:pointer;font-weight:600;font-size:13.5px;display:inline-flex;align-items:center;gap:7px;transition:all .18s}
+.btn-red{background:linear-gradient(135deg,#C62828,#E53935);color:#fff;box-shadow:0 2px 8px rgba(198,40,40,.3)}
+.btn-red:hover{opacity:.9;transform:translateY(-1px)}
+.btn-blue{background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;box-shadow:0 2px 8px rgba(21,101,192,.3)}
+.btn-blue:hover{opacity:.9;transform:translateY(-1px)}
+.btn-green{background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff}
+.btn-green:hover{opacity:.9;transform:translateY(-1px)}
+.btn-outline{background:#fff;border:1.5px solid #ddd;color:#555}
+.btn-outline:hover{border-color:#C62828;color:#C62828}
+
+/* INPUTS */
+input,select,textarea{background:#fff;border:1.5px solid #ddd;color:#1a1a2e;border-radius:9px;padding:9px 13px;font-size:13.5px;width:100%;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:#1565C0;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
+label{font-size:11.5px;color:#555;font-weight:600;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.04em}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#F5F5F5;padding:9px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#757575;font-weight:700;border-bottom:2px solid #C62828}
+td{padding:9px 12px;border-bottom:1px solid #f0f0f0;color:#333}
+tr:hover td{background:#FFF8F8}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:18px;padding:28px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-title{font-size:18px;font-weight:700;color:#C62828}
+
+/* TABS */
+.tab-btn{padding:7px 16px;border-radius:8px;border:1.5px solid #ddd;cursor:pointer;font-size:13px;font-weight:600;background:#fff;color:#888;transition:all .2s}
+.tab-btn.active{background:#C62828;color:#fff;border-color:#C62828}
+
+/* SECTION */
+.sec-title{font-size:20px;font-weight:800;color:#C62828;display:flex;align-items:center;gap:9px}
+
+/* PROGRESS */
+.prog-bar{height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px}
+
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.chip-blue{background:#E3F2FD;color:#1565C0}
+.chip-red{background:#FFEBEE;color:#C62828}
+.chip-green{background:#E8F5E9;color:#2E7D32}
+.chip-yellow{background:#FFF8E1;color:#F57F17}
+.chip-gray{background:#F5F5F5;color:#555}
+
+.page{display:none}
+.page.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chart-wrap{position:relative;height:240px}
+
+/* HEADER BANNER */
+.header-banner{background:linear-gradient(135deg,#C62828 0%,#1565C0 100%);color:#fff;padding:18px 24px;border-radius:14px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main-wrap{margin-left:0!important}
+  #menuBtn{display:block!important}
+}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <!-- Logo Area -->
+  <div style="padding:12px 10px 14px;border-bottom:2px solid #C62828;background:#ffffff;text-align:center">
+    <img src="logo.png" alt="Logo BPR" style="width:95%;max-width:210px;height:auto;object-fit:contain;display:block;margin:0 auto" onerror="this.style.display='none'"/>
+    <div style="margin-top:7px">
+      <div style="font-size:10px;color:#555;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.3">BPR. Bank Surya Yudha</div>
+      <div style="font-size:13px;color:#C62828;font-weight:800;letter-spacing:.02em;line-height:1.4">Kantor Kas Segamas</div>
+      <div style="font-size:9px;color:#888;font-style:italic;margin-top:1px">Mitra Menjadi Sukses</div>
+    </div>
+  </div>
+
+  <nav style="flex:1;padding:12px 10px;overflow-y:auto">
+    <div class="nav-cat">Menu Utama</div>
+    <div class="nav-item active" onclick="goTo('dashboard')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="goTo('operasional')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Operasional
+    </div>
+    <div class="nav-item" onclick="goTo('marketing')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Marketing / Funding
+    </div>
+    <div class="nav-item" onclick="goTo('lending')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      AO Lending
+    </div>
+    <div class="nav-item" onclick="goTo('remedial')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Remedial
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-cat">Laporan</div>
+    <div class="nav-item" onclick="goTo('laporan')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Cetak Laporan PDF
+    </div>
+  </nav>
+
+  <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.15);font-size:10px;color:rgba(255,255,255,.4);text-align:center">
+    Laporan Bulanan by Sofyan Harlis Subekti
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-wrap" id="mainWrap">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;padding:4px;display:none" id="menuBtn">
+        <svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2.5" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div>
+        <div id="pageTitle" style="font-size:17px;font-weight:800;color:#C62828">Dashboard</div>
+        <div id="pageSubtitle" style="font-size:11.5px;color:#888">Ringkasan laporan keuangan kantor kas</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <select id="globalMonth" onchange="onMonthChange()" style="width:auto;padding:7px 12px;font-weight:600;border-color:#ddd;color:#333"></select>
+      <button class="btn btn-red" onclick="openModal('inputModal')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Input Data
+      </button>
+    </div>
+  </div>
+
+  <div class="page-area">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="page active" id="page-dashboard">
+      <!-- Banner -->
+      <div class="header-banner">
+        <div>
+          <div style="font-size:13px;opacity:.8">BPR. Bank Surya Yudha – Kantor Kas Segamas</div>
+          <div style="font-size:22px;font-weight:800">Laporan Bulanan <span id="dash-month-label" style="color:#FFD54F"></span></div>
+          <div style="font-size:12px;opacity:.7;margin-top:2px">Laporan Bulanan by Sofyan Harlis Subekti</div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+        <div class="kpi" style="background:linear-gradient(135deg,#C62828,#E53935)">
+          <div style="font-size:10.5px;opacity:.85;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Nasabah / Hari</div>
+          <div style="font-size:26px;font-weight:800" id="kpi-nasabah">0</div>
+          <div id="kpi-nasabah-mom" style="margin-top:6px"></div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#1565C0,#1976D2)">
+          <div style="font-size:10.5px;opacity:.85;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Total Funding</div>
+          <div style="font-size:22px;font-weight:800" id="kpi-funding">Rp 0</div>
+          <div id="kpi-funding-mom" style="margin-top:6px"></div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#AD1457,#E91E63)">
+          <div style="font-size:10.5px;opacity:.85;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Pencairan AO</div>
+          <div style="font-size:22px;font-weight:800" id="kpi-pencairan">Rp 0</div>
+          <div id="kpi-pencairan-mom" style="margin-top:6px"></div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#E65100,#F57C00)">
+          <div style="font-size:10.5px;opacity:.85;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Total NPL</div>
+          <div style="font-size:26px;font-weight:800" id="kpi-npl">0</div>
+          <div id="kpi-npl-mom" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#1565C0;margin-bottom:12px">Tren Nasabah Operasional (MoM)</div><div class="chart-wrap"><canvas id="chartNasabah"></canvas></div></div>
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:12px">Realisasi Funding per Produk</div><div class="chart-wrap"><canvas id="chartFunding"></canvas></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#AD1457;margin-bottom:12px">Tren Pencairan AO (MoM)</div><div class="chart-wrap"><canvas id="chartPencairan"></canvas></div></div>
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#E65100;margin-bottom:12px">Tren NPL Kolektabilitas (MoM)</div><div class="chart-wrap"><canvas id="chartNPL"></canvas></div></div>
+      </div>
+
+      <!-- Summary -->
+      <div class="card" style="border-left:4px solid #C62828">
+        <div style="font-size:15px;font-weight:700;color:#C62828;margin-bottom:10px">📋 Kesimpulan & Analisa Bulan Ini</div>
+        <div id="summaryText" style="color:#555;font-size:13.5px;line-height:1.8">Belum ada data. Silakan input data terlebih dahulu.</div>
+      </div>
+    </div>
+
+    <!-- ===== OPERASIONAL ===== -->
+    <div class="page" id="page-operasional">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div class="sec-title"><svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Operasional Kas</div>
+        <button class="btn btn-red" onclick="openModal('inputModal');switchTab('tab-op')">+ Input Data</button>
+      </div>
+      <div class="card mb-3" style="border-left:4px solid #1565C0;margin-bottom:14px">
+        <div style="font-size:11px;color:#888;margin-bottom:3px">Petugas Operasional (Kas)</div>
+        <div style="font-size:16px;font-weight:700;color:#1565C0" id="opStaffName">–</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="card" style="text-align:center;border-top:3px solid #C62828">
+          <div style="font-size:10.5px;color:#888;text-transform:uppercase">Rata-rata Nasabah/Hari</div>
+          <div style="font-size:28px;font-weight:800;color:#C62828;margin:6px 0" id="op-nasabah">0</div>
+          <div id="op-nasabah-mom"></div>
+        </div>
+        <div class="card" style="text-align:center;border-top:3px solid #1565C0">
+          <div style="font-size:10.5px;color:#888;text-transform:uppercase">Rata-rata Slip/Hari</div>
+          <div style="font-size:28px;font-weight:800;color:#1565C0;margin:6px 0" id="op-slip">0</div>
+          <div id="op-slip-mom"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px">
+        <div class="card" style="text-align:center;border-top:3px solid #1565C0"><div style="font-size:10.5px;color:#888;text-transform:uppercase">NOA Tabungan</div><div style="font-size:22px;font-weight:800;color:#1565C0;margin:6px 0" id="op-noa-tab">0</div><div id="op-noa-tab-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #2E7D32"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Nominal Tabungan</div><div style="font-size:19px;font-weight:800;color:#2E7D32;margin:6px 0" id="op-nom-tab">Rp 0</div><div id="op-nom-tab-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #AD1457"><div style="font-size:10.5px;color:#888;text-transform:uppercase">NOA Deposito</div><div style="font-size:22px;font-weight:800;color:#AD1457;margin:6px 0" id="op-noa-dep">0</div><div id="op-noa-dep-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #E65100"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Nominal Deposito</div><div style="font-size:19px;font-weight:800;color:#E65100;margin:6px 0" id="op-nom-dep">Rp 0</div><div id="op-nom-dep-mom"></div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px;background:#F8F9FA">
+        <div style="font-size:12px;color:#555;text-align:center" id="op-total-info">Belum ada data bulan ini</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#1565C0;margin-bottom:10px">Rata-rata Harian (MoM)</div><div class="chart-wrap"><canvas id="chartOpNasabah"></canvas></div></div>
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:10px">Total Bulanan (MoM)</div><div class="chart-wrap"><canvas id="chartOpSetoran"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:10px">Data MoM Operasional</div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Bulan</th><th>Hari Kerja</th><th>Total Nasabah</th><th>Avg/Hari</th><th>Total Slip</th><th>Avg/Hari</th><th>NOA Tab</th><th>Nominal Tab</th><th>NOA Dep</th><th>Nominal Dep</th><th>Petugas</th></tr></thead><tbody id="tbodyOp"></tbody></table></div>
+      </div>
+      <div class="card" style="border-left:4px solid #C62828">
+        <div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:7px">📝 Analisa Operasional</div>
+        <div id="analysisOp" style="color:#555;font-size:13.5px;line-height:1.8">–</div>
+      </div>
+    </div>
+
+    <!-- ===== MARKETING ===== -->
+    <div class="page" id="page-marketing">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div class="sec-title"><svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Marketing / Funding</div>
+        <button class="btn btn-red" onclick="openModal('inputModal');switchTab('tab-mkt')">+ Input Data</button>
+      </div>
+      <div class="card" style="border-left:4px solid #1565C0;margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:11px;color:#888;margin-bottom:4px">Petugas Funding Dana</div><div style="display:flex;gap:10px" id="mktStaffNames"><span>–</span></div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#888;font-weight:600">Tampilkan:</span><select id="filter-mkt" onchange="updateStaffFilter('mkt')" style="width:auto;padding:6px 10px;font-size:13px;font-weight:600;border-color:#1565C0;color:#1565C0;border-radius:8px"><option value="all">Kumulatif (Semua)</option></select></div></div></div>
+      <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;margin-bottom:14px">
+        <div class="card" style="text-align:center;border-top:3px solid #1565C0">
+          <div style="font-size:10.5px;color:#888;text-transform:uppercase">Slip/Hari</div>
+          <div style="font-size:28px;font-weight:800;color:#1565C0;margin:6px 0" id="mkt-slip">0</div>
+          <div id="mkt-slip-mom"></div>
+        </div>
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#1565C0;margin-bottom:8px">Tren Slip Harian (MoM)</div><div class="chart-wrap" style="height:130px"><canvas id="chartMktSlip"></canvas></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px">
+        <div class="card" style="text-align:center;border-top:3px solid #3949AB"><div style="font-size:10.5px;color:#888;text-transform:uppercase">NOA Tabungan</div><div style="font-size:22px;font-weight:800;color:#3949AB;margin:6px 0" id="mkt-noa-tab">0</div><div id="mkt-noa-tab-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #0288D1"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Pengelolaan Tabungan</div><div style="font-size:22px;font-weight:800;color:#0288D1;margin:6px 0" id="mkt-pgl-tab">0</div><div id="mkt-pgl-tab-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #AD1457"><div style="font-size:10.5px;color:#888;text-transform:uppercase">NOA Deposito</div><div style="font-size:22px;font-weight:800;color:#AD1457;margin:6px 0" id="mkt-noa-dep">0</div><div id="mkt-noa-dep-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #E65100"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Pengelolaan Deposito</div><div style="font-size:22px;font-weight:800;color:#E65100;margin:6px 0" id="mkt-pgl-dep">0</div><div id="mkt-pgl-dep-mom"></div></div>
+      </div>
+
+      <!-- Produk Grid -->
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:14px">Target vs Realisasi per Produk</div>
+        <div id="produkGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:10px">Grafik Target vs Realisasi</div>
+        <div class="chart-wrap" style="height:290px"><canvas id="chartMktProduk"></canvas></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:10px">Data MoM Funding</div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Bulan</th><th>Slip/Hari</th><th>Tab ATM</th><th>Tab Surya</th><th>TAS</th><th>Tab Kurban</th><th>Deposito</th><th>Tab Imroh</th><th>Tab Haji</th><th>THT</th><th>Tab Piknik</th><th>Tab Simpel</th><th>NOA Tab</th><th>Pgl Tab</th><th>NOA Dep</th><th>Pgl Dep</th></tr></thead><tbody id="tbodyMkt"></tbody></table></div>
+      </div>
+
+      <div class="card" style="border-left:4px solid #C62828">
+        <div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:7px">📝 Analisa Marketing</div>
+        <div id="analysisMkt" style="color:#555;font-size:13.5px;line-height:1.8">–</div>
+      </div>
+    </div>
+
+    <!-- ===== AO LENDING ===== -->
+    <div class="page" id="page-lending">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div class="sec-title"><svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>AO Landing</div>
+        <button class="btn btn-red" onclick="openModal('inputModal');switchTab('tab-ao')">+ Input Data</button>
+      </div>
+      <div class="card" style="border-left:4px solid #1565C0;margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:11px;color:#888;margin-bottom:4px">Petugas AO Lending</div><div style="display:flex;gap:10px" id="aoStaffNames"><span>–</span></div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#888;font-weight:600">Tampilkan:</span><select id="filter-ao" onchange="updateStaffFilter('ao')" style="width:auto;padding:6px 10px;font-size:13px;font-weight:600;border-color:#7B1FA2;color:#7B1FA2;border-radius:8px"><option value="all">Kumulatif (Semua)</option></select></div></div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+        <div class="card" style="text-align:center;border-top:3px solid #AD1457"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Pencairan</div><div style="font-size:19px;font-weight:800;color:#AD1457;margin:6px 0" id="ao-pencairan">Rp 0</div><div id="ao-pencairan-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #1565C0"><div style="font-size:10.5px;color:#888;text-transform:uppercase">NOA</div><div style="font-size:22px;font-weight:800;color:#1565C0;margin:6px 0" id="ao-noa">0</div><div id="ao-noa-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #2E7D32"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Pelunasan</div><div style="font-size:22px;font-weight:800;color:#2E7D32;margin:6px 0" id="ao-pelunasan">0</div><div id="ao-pelunasan-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #2E7D32"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Nasabah Lancar</div><div style="font-size:22px;font-weight:800;color:#2E7D32;margin:6px 0" id="ao-lancar">0</div><div id="ao-lancar-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #F57F17"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Nasabah DPK</div><div style="font-size:22px;font-weight:800;color:#F57F17;margin:6px 0" id="ao-dpk">0</div><div id="ao-dpk-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #C62828"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Angsuran Masuk</div><div style="font-size:19px;font-weight:800;color:#C62828;margin:6px 0" id="ao-angsuran">Rp 0</div><div id="ao-angsuran-mom"></div></div>
+      </div>
+        <div class="card" style="text-align:center;border-top:3px solid #0288D1"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Asset</div><div style="font-size:19px;font-weight:800;color:#0288D1;margin:6px 0" id="ao-asset">Rp 0</div><div id="ao-asset-mom"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#AD1457;margin-bottom:10px">Tren Pencairan & NOA (MoM)</div><div class="chart-wrap"><canvas id="chartAOPencairan"></canvas></div></div>
+        <div class="card"><div style="font-size:13px;font-weight:700;color:#1565C0;margin-bottom:10px">Lancar vs DPK (MoM)</div><div class="chart-wrap"><canvas id="chartAOKolekt"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:10px">Data MoM AO Lending</div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Bulan</th><th>NOA Kredit Real</th><th>PC Kredit Real</th><th>Pencairan</th><th>NOA</th><th>Pelunasan</th><th>Lancar</th><th>DPK</th><th>Angsuran</th><th>Asset</th><th>Petugas</th></tr></thead><tbody id="tbodyAO"></tbody></table></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#2E7D32;margin-bottom:10px">Target vs Realisasi Kredit</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:#E8F5E9;border-radius:10px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:6px;text-transform:uppercase">NOA Kredit</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:2px"><span>Target</span><span id="ao-noa-kredit-target">0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;color:#1565C0;margin-bottom:6px"><span>Realisasi</span><span id="ao-noa-kredit-real">0</span></div>
+            <div style="height:6px;background:#eee;border-radius:3px"><div id="ao-noa-kredit-bar" style="height:100%;width:0%;background:#2E7D32;border-radius:3px;transition:width .4s"></div></div>
+            <div style="text-align:right;font-size:11px;font-weight:700;color:#2E7D32;margin-top:3px" id="ao-noa-kredit-pct">0%</div>
+          </div>
+          <div style="background:#E8F5E9;border-radius:10px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:6px;text-transform:uppercase">Pencairan Kredit</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:2px"><span>Target</span><span id="ao-pencairan-kredit-target">Rp 0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;color:#1565C0;margin-bottom:6px"><span>Realisasi</span><span id="ao-pencairan-kredit-real">Rp 0</span></div>
+            <div style="height:6px;background:#eee;border-radius:3px"><div id="ao-pencairan-kredit-bar" style="height:100%;width:0%;background:#2E7D32;border-radius:3px;transition:width .4s"></div></div>
+            <div style="text-align:right;font-size:11px;font-weight:700;color:#2E7D32;margin-top:3px" id="ao-pencairan-kredit-pct">0%</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="border-left:4px solid #C62828">
+        <div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:7px">📝 Analisa AO Lending</div>
+        <div id="analysisAO" style="color:#555;font-size:13.5px;line-height:1.8">–</div>
+      </div>
+    </div>
+
+    <!-- ===== REMEDIAL ===== -->
+    <div class="page" id="page-remedial">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div class="sec-title"><svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>Remedial</div>
+        <button class="btn btn-red" onclick="openModal('inputModal');switchTab('tab-rem')">+ Input Data</button>
+      </div>
+      <div class="card" style="border-left:4px solid #C62828;margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:11px;color:#888;margin-bottom:4px">Petugas AO Remedial</div><div style="display:flex;gap:10px" id="remStaffNames"><span>–</span></div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#888;font-weight:600">Tampilkan:</span><select id="filter-rem" onchange="updateStaffFilter('rem')" style="width:auto;padding:6px 10px;font-size:13px;font-weight:600;border-color:#C62828;color:#C62828;border-radius:8px"><option value="all">Kumulatif (Semua)</option></select></div></div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+        <div class="card" style="text-align:center;border-top:3px solid #F57F17"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Kurang Lancar (KL)</div><div style="font-size:26px;font-weight:800;color:#F57F17;margin:6px 0" id="rem-kl">0</div><div id="rem-kl-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #E65100"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Diragukan (DRG)</div><div style="font-size:26px;font-weight:800;color:#E65100;margin:6px 0" id="rem-drg">0</div><div id="rem-drg-mom"></div></div>
+        <div class="card" style="text-align:center;border-top:3px solid #C62828"><div style="font-size:10.5px;color:#888;text-transform:uppercase">Macet</div><div style="font-size:26px;font-weight:800;color:#C62828;margin:6px 0" id="rem-macet">0</div><div id="rem-macet-mom"></div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:10px">Tren NPL Kolektabilitas (MoM)</div><div class="chart-wrap"><canvas id="chartRemNPL"></canvas></div></div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;color:#333">Daftar Debitur Litigasi</div>
+          <button class="btn btn-red" onclick="openModal('litigasiModal')" style="padding:5px 12px;font-size:12px">+ Tambah</button>
+        </div>
+        <div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Nama Debitur</th><th>No. Rek</th><th>Plafon</th><th>Outstanding</th><th>Kol.</th><th>Status Litigasi</th><th>Aksi</th></tr></thead><tbody id="tbodyLitigasi"></tbody></table></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:10px">Data MoM Remedial</div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Bulan</th><th>KL</th><th>DRG</th><th>Macet</th><th>Total NPL</th><th>Litigasi</th><th>Petugas</th></tr></thead><tbody id="tbodyRem"></tbody></table></div>
+      </div>
+      <div class="card" style="border-left:4px solid #C62828">
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:10px">Penyelesaian Kredit Bermasalah</div>
+        <div id="tbodyPenyelesaian"><div style="color:#aaa;font-size:12px;text-align:center;padding:8px">Belum ada data</div></div>
+      </div>
+        <div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:7px">📝 Analisa Remedial</div>
+        <div id="analysisRem" style="color:#555;font-size:13.5px;line-height:1.8">–</div>
+      </div>
+    </div>
+
+    <!-- ===== LAPORAN ===== -->
+    <div class="page" id="page-laporan">
+      <div class="sec-title" style="margin-bottom:18px"><svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Cetak Laporan PDF</div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:14px">Pilih konten laporan:</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer"><input type="checkbox" id="pdfOp" checked style="width:auto;accent-color:#C62828"> Operasional</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer"><input type="checkbox" id="pdfMkt" checked style="width:auto;accent-color:#C62828"> Marketing / Funding</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer"><input type="checkbox" id="pdfAO" checked style="width:auto;accent-color:#C62828"> AO Lending</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer"><input type="checkbox" id="pdfRem" checked style="width:auto;accent-color:#C62828"> Remedial</label>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-green" onclick="generatePDF()">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+          </button>
+          <button class="btn btn-blue" onclick="printReport()">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+        </div>
+      </div>
+
+      <!-- CATATAN KEPALA KAS -->
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #1565C0">
+        <div style="font-size:14px;font-weight:700;color:#1565C0;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <svg width="18" height="18" fill="none" stroke="#1565C0" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Catatan Kepala Kas
+        </div>
+        <div style="font-size:11.5px;color:#888;margin-bottom:10px;line-height:1.5">Tambahkan catatan singkat (bisa dengan kata-kata seadanya). Sistem akan otomatis menyempurnakan menjadi kalimat profesional untuk laporan.</div>
+        <div style="display:flex;gap:10px;margin-bottom:10px;align-items:end">
+          <div style="flex:0 0 180px">
+            <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:4px;display:block">BAGIAN</label>
+            <select id="catatanBagian" style="width:100%;padding:8px 10px;border:1.5px solid #1565C0;border-radius:8px;font-size:13px;font-weight:600;color:#1565C0">
+              <option value="operasional">Operasional</option>
+              <option value="marketing">Marketing / Funding</option>
+              <option value="lending">AO Lending</option>
+              <option value="remedial">Remedial</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:4px;display:block">CATATAN</label>
+            <textarea id="catatanInput" rows="2" placeholder="Tulis catatan singkat, misal: nasabah naik karena ada program tabungan berhadiah..." style="resize:vertical;min-height:42px"></textarea>
+          </div>
+          <button class="btn btn-blue" onclick="submitCatatan()" id="btnCatatan" style="white-space:nowrap;align-self:end">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tambah
+          </button>
+        </div>
+        <div id="catatanList"></div>
+      </div>
+      <div id="pdfPreview" style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:40px"></div>
+    </div>
+
+  </div><!-- /page-area -->
+</div><!-- /main-wrap -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ===== INPUT MODAL ===== -->
+<div class="modal-overlay" id="inputModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div class="modal-title">Input Data Laporan</div>
+      <button onclick="closeModal('inputModal')" style="background:none;border:none;cursor:pointer;font-size:22px;color:#aaa;line-height:1">×</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:#FFF8E1;border:1.5px solid #FFE082;border-radius:10px;padding:10px 14px">
+      <label style="font-size:12px;color:#5D4037;font-weight:700;margin-bottom:0;text-transform:uppercase;white-space:nowrap">Periode Bulan</label>
+      <select id="modalMonth" onchange="onModalMonthChange()" style="width:auto;padding:7px 12px;font-weight:600;border-color:#C62828;color:#C62828;border-radius:8px;flex:1"></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+      <button class="tab-btn active" id="tab-op" onclick="switchTab('tab-op')">Operasional</button>
+      <button class="tab-btn" id="tab-mkt" onclick="switchTab('tab-mkt')">Marketing</button>
+      <button class="tab-btn" id="tab-ao" onclick="switchTab('tab-ao')">AO Landing</button>
+      <button class="tab-btn" id="tab-rem" onclick="switchTab('tab-rem')">Remedial</button>
+    </div>
+
+    <!-- FORM OPERASIONAL -->
+    <div id="form-op" class="form-section">
+      <div style="background:#FFF5F5;border:1.5px solid #FFCDD2;border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:11px;color:#C62828;font-weight:700;margin-bottom:10px;text-transform:uppercase">👤 Petugas Operasional Kas (1 Orang)</div>
+        <div><label>Nama Petugas Kas</label><input type="text" id="f-op-staff" placeholder="Nama lengkap petugas kas"></div>
+      </div>
+      <div style="background:#FFF8E1;border:1.5px solid #FFE082;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12.5px;color:#5D4037;line-height:1.6">
+        <b>💡 Cara input:</b> Masukkan <b>total kumulatif bulan ini</b>.<br>
+        Sistem otomatis menghitung rata-rata per hari kerja.<br>
+        Contoh: Total nasabah bulan ini 520 + 26 hari kerja = <b>20 nasabah/hari</b>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label>Total Nasabah Bulan Ini (kumulatif)</label><input type="number" id="f-op-nasabah" placeholder="Contoh: 520" min="0"></div>
+        <div><label>Total Slip Bulan Ini (kumulatif)</label><input type="number" id="f-op-slip" placeholder="Contoh: 780" min="0"></div>
+        <div style="grid-column:1/-1"><label>Jumlah Hari Kerja Bulan Ini</label>
+          <input type="number" id="f-op-harikerja" placeholder="Contoh: 26" min="1" max="31" style="max-width:200px">
+        </div>
+        <div><label>NOA Tabungan</label><input type="number" id="f-op-noa-tab" placeholder="0" min="0"></div>
+        <div><label>Nominal Tabungan (Rp)</label><input type="number" id="f-op-nom-tab" placeholder="0" min="0"></div>
+        <div><label>NOA Deposito</label><input type="number" id="f-op-noa-dep" placeholder="0" min="0"></div>
+        <div><label>Nominal Deposito (Rp)</label><input type="number" id="f-op-nom-dep" placeholder="0" min="0"></div>
+      </div>
+    </div>
+
+    <!-- FORM MARKETING -->
+    <div id="form-mkt" class="form-section" style="display:none">
+      <div style="background:#E3F2FD;border:1.5px solid #BBDEFB;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;color:#1565C0;font-weight:700;margin-bottom:10px;text-transform:uppercase">Nama Petugas Funding Dana</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>Petugas 1</label><input type="text" id="f-mkt-s0" placeholder="Nama petugas 1" oninput="updateFormSubTabLabel('mkt')"></div>
+          <div><label>Petugas 2</label><input type="text" id="f-mkt-s1" placeholder="Nama petugas 2" oninput="updateFormSubTabLabel('mkt')"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button type="button" id="ftab-mkt-0" class="tab-btn active" onclick="switchFormSubTab('mkt',0)">Data Petugas 1</button>
+        <button type="button" id="ftab-mkt-1" class="tab-btn" onclick="switchFormSubTab('mkt',1)">Data Petugas 2</button>
+      </div>
+      <div id="fblock-mkt-0">
+        <div style="margin-bottom:12px"><label>Slip Rata-rata per Hari</label><input type="number" id="f-mkt-0-slip" placeholder="0" min="0"></div>
+        <div style="background:#F5F5F5;border-radius:10px;padding:14px">
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:8px"><div></div><div style="font-size:11px;color:#1565C0;font-weight:700;text-align:center">TARGET</div><div style="font-size:11px;color:#C62828;font-weight:700;text-align:center">REALISASI</div></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab ATM</div><input type="number" id="f-mkt-0-t-Tab_ATM" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Tab_ATM" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Surya</div><input type="number" id="f-mkt-0-t-Tab_Surya" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Tab_Surya" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">TAS</div><input type="number" id="f-mkt-0-t-TAS" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-TAS" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Kurban</div><input type="number" id="f-mkt-0-t-Tab_Kurban" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Tab_Kurban" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Deposito</div><input type="number" id="f-mkt-0-t-Deposito" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Deposito" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Imroh</div><input type="number" id="f-mkt-0-t-Tab_Imroh" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Tab_Imroh" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Haji</div><input type="number" id="f-mkt-0-t-Tab_Haji" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Tab_Haji" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">THT</div><input type="number" id="f-mkt-0-t-THT" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-THT" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Piknik</div><input type="number" id="f-mkt-0-t-Tab_Piknik" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Tab_Piknik" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Simpel</div><input type="number" id="f-mkt-0-t-Tab_Simpel" placeholder="0" min="0"><input type="number" id="f-mkt-0-r-Tab_Simpel" placeholder="0" min="0"></div>
+        </div>
+        <div style="background:#EEF2FF;border-radius:10px;padding:12px;margin-top:10px">
+          <div style="font-size:11px;font-weight:700;color:#3949AB;margin-bottom:10px;text-transform:uppercase">Pengelolaan Rekening</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">NOA Tabungan</label><input type="number" id="f-mkt-0-noa-tab" placeholder="0" min="0"></div>
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">Pengelolaan Tabungan</label><input type="number" id="f-mkt-0-pgl-tab" placeholder="0" min="0"></div>
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">NOA Deposito</label><input type="number" id="f-mkt-0-noa-dep" placeholder="0" min="0"></div>
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">Pengelolaan Deposito</label><input type="number" id="f-mkt-0-pgl-dep" placeholder="0" min="0"></div>
+          </div>
+        </div>
+      </div>
+      <div id="fblock-mkt-1" style="display:none">
+        <div style="margin-bottom:12px"><label>Slip Rata-rata per Hari</label><input type="number" id="f-mkt-1-slip" placeholder="0" min="0"></div>
+        <div style="background:#F5F5F5;border-radius:10px;padding:14px">
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:8px"><div></div><div style="font-size:11px;color:#1565C0;font-weight:700;text-align:center">TARGET</div><div style="font-size:11px;color:#C62828;font-weight:700;text-align:center">REALISASI</div></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab ATM</div><input type="number" id="f-mkt-1-t-Tab_ATM" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Tab_ATM" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Surya</div><input type="number" id="f-mkt-1-t-Tab_Surya" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Tab_Surya" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">TAS</div><input type="number" id="f-mkt-1-t-TAS" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-TAS" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Kurban</div><input type="number" id="f-mkt-1-t-Tab_Kurban" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Tab_Kurban" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Deposito</div><input type="number" id="f-mkt-1-t-Deposito" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Deposito" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Imroh</div><input type="number" id="f-mkt-1-t-Tab_Imroh" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Tab_Imroh" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Haji</div><input type="number" id="f-mkt-1-t-Tab_Haji" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Tab_Haji" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">THT</div><input type="number" id="f-mkt-1-t-THT" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-THT" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Piknik</div><input type="number" id="f-mkt-1-t-Tab_Piknik" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Tab_Piknik" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Tab Simpel</div><input type="number" id="f-mkt-1-t-Tab_Simpel" placeholder="0" min="0"><input type="number" id="f-mkt-1-r-Tab_Simpel" placeholder="0" min="0"></div>
+        </div>
+        <div style="background:#EEF2FF;border-radius:10px;padding:12px;margin-top:10px">
+          <div style="font-size:11px;font-weight:700;color:#3949AB;margin-bottom:10px;text-transform:uppercase">Pengelolaan Rekening</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">NOA Tabungan</label><input type="number" id="f-mkt-1-noa-tab" placeholder="0" min="0"></div>
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">Pengelolaan Tabungan</label><input type="number" id="f-mkt-1-pgl-tab" placeholder="0" min="0"></div>
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">NOA Deposito</label><input type="number" id="f-mkt-1-noa-dep" placeholder="0" min="0"></div>
+            <div><label style="font-size:12px;color:#555;margin-bottom:4px;display:block">Pengelolaan Deposito</label><input type="number" id="f-mkt-1-pgl-dep" placeholder="0" min="0"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM AO LENDING -->
+    <div id="form-ao" class="form-section" style="display:none">
+      <div style="background:#F3E5F5;border:1.5px solid #E1BEE7;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;color:#7B1FA2;font-weight:700;margin-bottom:10px;text-transform:uppercase">👥 Nama Petugas AO Lending</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>AO 1</label><input type="text" id="f-ao-s0" placeholder="Nama AO 1" oninput="updateFormSubTabLabel('ao')"></div>
+          <div><label>AO 2</label><input type="text" id="f-ao-s1" placeholder="Nama AO 2" oninput="updateFormSubTabLabel('ao')"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button type="button" id="ftab-ao-0" class="tab-btn active" onclick="switchFormSubTab('ao',0)">Data AO 1</button>
+        <button type="button" id="ftab-ao-1" class="tab-btn" onclick="switchFormSubTab('ao',1)">Data AO 2</button>
+      </div>
+      <div id="fblock-ao-0">
+        <div style="background:#E8F5E9;border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:10px;text-transform:uppercase">NOA &amp; Pencairan Kredit</div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:8px"><div></div><div style="font-size:11px;color:#1565C0;font-weight:700;text-align:center">TARGET</div><div style="font-size:11px;color:#C62828;font-weight:700;text-align:center">REALISASI</div></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">NOA Kredit</div><input type="number" id="f-ao-0-noa-kredit-target" placeholder="0" min="0"><input type="number" id="f-ao-0-noa-kredit-realisasi" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:0"><div style="font-size:13px;font-weight:600">Pencairan Kredit (Rp)</div><input type="number" id="f-ao-0-pencairan-kredit-target" placeholder="0" min="0"><input type="number" id="f-ao-0-pencairan-kredit-realisasi" placeholder="0" min="0"></div>
+        </div>
+        <div style="background:#F5F5F5;border-radius:10px;padding:14px">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Pencairan (Rp)</div><input type="number" id="f-ao-0-pencairan-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">NOA (Akun Baru)</div><input type="number" id="f-ao-0-noa-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Pelunasan</div><input type="number" id="f-ao-0-pelunasan-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Angsuran Masuk (Rp)</div><input type="number" id="f-ao-0-angsuran-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Nasabah Lancar</div><input type="number" id="f-ao-0-lancar-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Nasabah DPK</div><input type="number" id="f-ao-0-dpk-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:0"><div style="font-size:13px;font-weight:600">Asset (Rp)</div><input type="number" id="f-ao-0-asset-curr" placeholder="0" min="0"></div>
+        </div>
+      </div>
+      <div id="fblock-ao-1" style="display:none">
+        <div style="background:#E8F5E9;border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:10px;text-transform:uppercase">NOA &amp; Pencairan Kredit</div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:8px"><div></div><div style="font-size:11px;color:#1565C0;font-weight:700;text-align:center">TARGET</div><div style="font-size:11px;color:#C62828;font-weight:700;text-align:center">REALISASI</div></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">NOA Kredit</div><input type="number" id="f-ao-1-noa-kredit-target" placeholder="0" min="0"><input type="number" id="f-ao-1-noa-kredit-realisasi" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:0"><div style="font-size:13px;font-weight:600">Pencairan Kredit (Rp)</div><input type="number" id="f-ao-1-pencairan-kredit-target" placeholder="0" min="0"><input type="number" id="f-ao-1-pencairan-kredit-realisasi" placeholder="0" min="0"></div>
+        </div>
+        <div style="background:#F5F5F5;border-radius:10px;padding:14px">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Pencairan (Rp)</div><input type="number" id="f-ao-1-pencairan-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">NOA (Akun Baru)</div><input type="number" id="f-ao-1-noa-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Pelunasan</div><input type="number" id="f-ao-1-pelunasan-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Angsuran Masuk (Rp)</div><input type="number" id="f-ao-1-angsuran-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Nasabah Lancar</div><input type="number" id="f-ao-1-lancar-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Nasabah DPK</div><input type="number" id="f-ao-1-dpk-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:0"><div style="font-size:13px;font-weight:600">Asset (Rp)</div><input type="number" id="f-ao-1-asset-curr" placeholder="0" min="0"></div>
+        </div>
+      </div>
+      </div>
+
+    <!-- FORM REMEDIAL -->
+    <div id="form-rem" class="form-section" style="display:none">
+      <div style="background:#FFEBEE;border:1.5px solid #FFCDD2;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;color:#C62828;font-weight:700;margin-bottom:10px;text-transform:uppercase">Nama Petugas AO Remedial</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>AO Remed 1</label><input type="text" id="f-rem-s0" placeholder="Nama AO Remed 1" oninput="updateFormSubTabLabel('rem')"></div>
+          <div><label>AO Remed 2</label><input type="text" id="f-rem-s1" placeholder="Nama AO Remed 2" oninput="updateFormSubTabLabel('rem')"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button type="button" id="ftab-rem-0" class="tab-btn active" onclick="switchFormSubTab('rem',0)">Data AO Remed 1</button>
+        <button type="button" id="ftab-rem-1" class="tab-btn" onclick="switchFormSubTab('rem',1)">Data AO Remed 2</button>
+      </div>
+      <div id="fblock-rem-0">
+        <div style="background:#F5F5F5;border-radius:10px;padding:14px">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Kurang Lancar / KL</div><input type="number" id="f-rem-0-kl-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Diragukan / DRG</div><input type="number" id="f-rem-0-drg-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:0"><div style="font-size:13px;font-weight:600">Macet</div><input type="number" id="f-rem-0-macet-curr" placeholder="0" min="0"></div>
+        </div>
+      </div>
+      <div id="fblock-rem-1" style="display:none">
+        <div style="background:#F5F5F5;border-radius:10px;padding:14px">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Kurang Lancar / KL</div><input type="number" id="f-rem-1-kl-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:600">Diragukan / DRG</div><input type="number" id="f-rem-1-drg-curr" placeholder="0" min="0"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;margin-bottom:0"><div style="font-size:13px;font-weight:600">Macet</div><input type="number" id="f-rem-1-macet-curr" placeholder="0" min="0"></div>
+        </div>
+      </div>
+      <div style="background:#FCE4EC;border:1.5px solid #FFCDD2;border-radius:10px;padding:14px;margin-top:12px">
+        <div style="font-size:11px;font-weight:700;color:#C62828;margin-bottom:12px;text-transform:uppercase">Penyelesaian Kredit Bermasalah</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px">
+          <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">NAMA DEBITUR</label><input type="text" id="f-rem-pnys-nama" placeholder="Nama debitur"></div>
+          <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">KUALITAS KREDIT</label><select id="f-rem-pnys-kualitas" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#fff"><option value="">Pilih...</option><option value="KL">KL (Kurang Lancar)</option><option value="DRG">DRG (Diragukan)</option><option value="Macet">Macet</option></select></div>
+          <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">PENYELESAIAN</label><input type="text" id="f-rem-pnys-penyelesaian" placeholder="Cara penyelesaian"></div>
+          <button type="button" onclick="addPenyelesaian()" style="background:#C62828;color:#fff;border:none;border-radius:8px;padding:0 16px;cursor:pointer;font-size:20px;font-weight:700;height:38px;align-self:end">+</button>
+        </div>
+        <div id="pnys-list"></div>
+      </div>
+  </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+      <button class="btn btn-outline" onclick="closeModal('inputModal')">Batal</button>
+      <button class="btn btn-red" onclick="saveData()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig={
+  apiKey:'AIzaSyD61JQuKV45VxL546K6dUwBa9XcJsAhLo4',
+  authDomain:'sgm-office.firebaseapp.com',
+  projectId:'sgm-office',
+  storageBucket:'sgm-office.firebasestorage.app',
+  messagingSenderId:'156732415565',
+  appId:'1:156732415565:web:018ad32e474d7616490604'
+};
+firebase.initializeApp(firebaseConfig);
+const fsDB=firebase.firestore();
+
+const PRODUK = ['Tab ATM','Tab Surya','TAS','Tab Kurban','Deposito','Tab Imroh','Tab Haji','THT','Tab Piknik','Tab Simpel'];
+const PRODUK_KEYS = PRODUK.map(p => p.replace(/\s/g,'_'));
+const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+let db = JSON.parse(localStorage.getItem('sgm_bpr') || '{}');
+let currentMonth = toYM(new Date());
+let charts = {};
+let filterMkt='all', filterAO='all', filterRem='all';
+let formMktTab=0, formAOTab=0, formRemTab=0;
+
+function getStaffData(section, monthKey, staffFilter){
+  const d=getMonthData(monthKey)[section]||{};
+  const staff=(d.staff||[]).filter(Boolean);
+  const ps=d.perStaff||{};
+  if(staffFilter&&staffFilter!=='all'&&section!=='lending'&&section!=='remedial') return ps[staffFilter]||{};
+  // cumulative: sum all staff
+  if(section==='lending'){
+    const AO_KEYS=['pencairan','noa','pelunasan','angsuran','lancar','dpk','asset'];
+    const isInd=staffFilter&&staffFilter!=='all';
+    const src=isInd?Object.assign({},ps[staffFilter]||{}):(()=>{const r={};AO_KEYS.forEach(k=>{r[k+'_prev']=staff.reduce((s,n)=>s+(ps[n]?.[k+'_prev']||0),0);r[k+'_curr']=staff.reduce((s,n)=>s+(ps[n]?.[k+'_curr']||0),0);});['noaKreditTarget','noaKreditRealisasi','pencairanKreditTarget','pencairanKreditRealisasi'].forEach(k=>{r[k]=staff.reduce((s,n)=>s+(ps[n]?.[k]||0),0);});return r;})();
+    AO_KEYS.forEach(k=>{src[k]=src[k+'_curr']||src[k]||0;});
+    return src;
+  }
+  if(section==='marketing'){
+    const produk={};
+    PRODUK.forEach(p=>{ produk[p]={
+      target:staff.reduce((s,n)=>s+(ps[n]?.produk?.[p]?.target||0),0),
+      realisasi:staff.reduce((s,n)=>s+(ps[n]?.produk?.[p]?.realisasi||0),0)
+    };});
+    return {slip:staff.reduce((s,n)=>s+(ps[n]?.slip||0),0), produk, noaTab:staff.reduce((s,n)=>s+(ps[n]?.noaTab||0),0), pglTab:staff.reduce((s,n)=>s+(ps[n]?.pglTab||0),0), noaDep:staff.reduce((s,n)=>s+(ps[n]?.noaDep||0),0), pglDep:staff.reduce((s,n)=>s+(ps[n]?.pglDep||0),0)};
+  }
+  if(section==='remedial'){
+    const REM_KEYS=['kl','drg','macet'];
+    const isInd=staffFilter&&staffFilter!=='all';
+    const src=isInd?Object.assign({},ps[staffFilter]||{}):(()=>{const r={};REM_KEYS.forEach(k=>{r[k+'_prev']=staff.reduce((s,n)=>s+(ps[n]?.[k+'_prev']||0),0);r[k+'_curr']=staff.reduce((s,n)=>s+(ps[n]?.[k+'_curr']||0),0);});return r;})();
+    REM_KEYS.forEach(k=>{src[k]=src[k+'_curr']||src[k]||0;});
+    return src;
+  }
+  return d;
+}
+
+function getAllStaff(section){
+  const all=new Set();
+  Object.values(db).forEach(function(d){
+    ((d[section]||{}).staff||[]).filter(Boolean).forEach(function(s){all.add(s);});
+  });
+  return [...all].sort();
+}
+
+function switchFormSubTab(mod, idx){
+  if(mod==='mkt') formMktTab=idx;
+  else if(mod==='ao') formAOTab=idx;
+  else formRemTab=idx;
+  [0,1].forEach(i=>{
+    const b=document.getElementById(`ftab-${mod}-${i}`);
+    const d=document.getElementById(`fblock-${mod}-${i}`);
+    if(b) b.className='tab-btn'+(i===idx?' active':'');
+    if(d) d.style.display=i===idx?'block':'none';
+  });
+}
+
+function updateStaffFilter(mod){
+  const sel=document.getElementById(`filter-${mod}`);
+  if(!sel) return;
+  if(mod==='mkt') filterMkt=sel.value;
+  else if(mod==='ao') filterAO=sel.value;
+  else filterRem=sel.value;
+  if(mod==='mkt') renderMarketing();
+  else if(mod==='ao') renderLending();
+  else renderRemedial();
+}
+
+function buildStaffFilterOptions(mod, staff){
+  const sel=document.getElementById(`filter-${mod}`);
+  if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML=`<option value="all">Kumulatif (Semua)</option>`+
+    staff.filter(Boolean).map(s=>`<option value="${s}">${s}</option>`).join('');
+  const newVal=cur&&staff.includes(cur)?cur:'all';
+  sel.value=newVal;
+  if(mod==='mkt') filterMkt=newVal;
+  else if(mod==='ao') filterAO=newVal;
+  else filterRem=newVal;
+}
+
+function saveDB(){
+  localStorage.setItem('sgm_bpr',JSON.stringify(db));
+  if(db[currentMonth]){
+    var d=JSON.parse(JSON.stringify(db[currentMonth]));
+    fsDB.collection('sgm_bpr').doc(currentMonth).set(d)
+      .catch(function(e){console.error('Firestore save error:',e);});
+  }
+}
+function getMonthData(m){ return db[m] || { operasional:{}, marketing:{}, lending:{}, remedial:{}, litigasi:[] }; }
+function toYM(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function fmt(n){ return Number(n||0).toLocaleString('id-ID'); }
+function fmtRp(n){ return 'Rp '+fmt(n); }
+function formatMonthLabel(m){ const [y,mo]=m.split('-'); return MONTHS_ID[parseInt(mo)-1]+' '+y; }
+function getPrevMonth(m){ const [y,mo]=m.split('-').map(Number); const d=new Date(y,mo-2,1); return toYM(d); }
+
+function momBadge(cur,prev,inverse=false){
+  if(prev===undefined||prev===null||prev==='') return '<span class="mom-flat">–</span>';
+  const diff=cur-prev;
+  if(diff===0) return '<span class="mom-flat">= 0%</span>';
+  const pct=prev===0?(cur>0?100:0):Math.round(Math.abs(diff)/prev*100);
+  const isGood=inverse?diff<0:diff>0;
+  const cls=isGood?'mom-up':'mom-down';
+  return `<span class="${cls}">${diff>0?'▲':'▼'} ${pct}%</span>`;
+}
+
+function getLast6Months(){
+  const r=[];
+  const [y,m]=currentMonth.split('-').map(Number);
+  for(let i=5;i>=0;i--){
+    const d=new Date(y,m-1-i,1);
+    r.push(toYM(d));
+  }
+  return r;
+}
+
+function init(){
+  buildMonthSelect();
+  db=JSON.parse(localStorage.getItem('sgm_bpr')||'{}');
+  renderAll();
+  fsDB.collection('sgm_bpr').onSnapshot(function(snap){
+    var fresh={};
+    snap.forEach(function(doc){fresh[doc.id]=doc.data();});
+    db=fresh;
+    localStorage.setItem('sgm_bpr',JSON.stringify(db));
+    renderAll();
+  },function(e){console.error('Firestore listen error:',e);});
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');navigator.serviceWorker.addEventListener('controllerchange',function(){window.location.reload();});}
+}
+
+function buildMonthSelect(){
+  const sel=document.getElementById('globalMonth'); sel.innerHTML='';
+  const now=new Date();
+  for(let i=11;i>=-1;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const val=toYM(d);
+    const o=document.createElement('option');
+    o.value=val; o.textContent=formatMonthLabel(val);
+    if(val===currentMonth) o.selected=true;
+    sel.appendChild(o);
+  }
+
+}
+
+function buildModalMonthSelect(){
+  var sel=document.getElementById('modalMonth'); if(!sel) return;
+  sel.innerHTML='';
+  var now=new Date();
+  for(var i=11;i>=-1;i--){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    var val=toYM(d);
+    var o=document.createElement('option');
+    o.value=val; o.textContent=formatMonthLabel(val);
+    if(val===currentMonth) o.selected=true;
+    sel.appendChild(o);
+  }
+}
+function getModalMonth(){ var sel=document.getElementById('modalMonth'); return sel?sel.value:currentMonth; }
+function onModalMonthChange(){ loadFormData(); }
+
+
+function onMonthChange(){ currentMonth=document.getElementById('globalMonth').value; filterMkt='all';filterAO='all';filterRem='all'; _aiDone=false; renderAll(); }
+
+function updateFormSubTabLabel(mod){
+  [0,1].forEach(i=>{
+    const nameEl=document.getElementById('f-'+mod+'-s'+i);
+    const btn=document.getElementById('ftab-'+mod+'-'+i);
+    if(nameEl&&btn){
+      const nm=nameEl.value.trim();
+      const prefix=mod==='mkt'?'Data Petugas ':mod==='ao'?'Data AO ':'Data AO Remed ';
+      btn.textContent=nm||(prefix+(i+1));
+    }
+  });
+}
+
+function goTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+page+"'")) n.classList.add('active');
+  });
+  const T={dashboard:['Dashboard','Ringkasan laporan keuangan kantor kas'],operasional:['Operasional Kas','Kegiatan kas & operasional harian'],marketing:['Marketing / Funding','Target & realisasi penghimpunan dana per produk'],lending:['AO Lending','Pencairan, NOA, dan kolektabilitas kredit'],remedial:['Remedial','Pengelolaan NPL & debitur bermasalah'],laporan:['Cetak Laporan PDF','Generate & unduh laporan bulanan']};
+  const t=T[page]||['',''];
+  document.getElementById('pageTitle').textContent=t[0];
+  document.getElementById('pageSubtitle').textContent=t[1];
+  renderAll();
+}
+
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function openModal(id){ document.getElementById(id).classList.add('open'); if(id==='inputModal'){buildModalMonthSelect();loadFormData();} }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.form-section').forEach(f=>f.style.display='none');
+  const el=document.getElementById(tab); if(el) el.classList.add('active');
+  const map={'tab-op':'form-op','tab-mkt':'form-mkt','tab-ao':'form-ao','tab-rem':'form-rem'};
+  if(map[tab]) document.getElementById(map[tab]).style.display='block';
+}
+
+function loadFormData(){
+  const d=getMonthData(getModalMonth());
+  const op=d.operasional||{}, mk=d.marketing||{}, ao=d.lending||{}, rem=d.remedial||{};
+  document.getElementById('f-op-staff').value=op.staff||'';
+  document.getElementById('f-op-nasabah').value=op.totalNasabah||'';
+  document.getElementById('f-op-slip').value=op.totalSlip||'';
+  document.getElementById('f-op-harikerja').value=op.hariKerja||'';
+  document.getElementById('f-op-noa-tab').value=op.noaTabungan||'';
+  document.getElementById('f-op-nom-tab').value=op.nominalTabungan||'';
+  document.getElementById('f-op-noa-dep').value=op.noaDeposito||'';
+  document.getElementById('f-op-nom-dep').value=op.nominalDeposito||'';
+  // Marketing per-staff
+  const mkStaff=mk.staff||[];
+  const mkPs=mk.perStaff||{};
+  document.getElementById('f-mkt-s0').value=mkStaff[0]||'';
+  document.getElementById('f-mkt-s1').value=mkStaff[1]||'';
+  [0,1].forEach(i=>{
+    const nm=mkStaff[i]||''; const ps=mkPs[nm]||{};
+    const se=document.getElementById('f-mkt-'+i+'-slip'); if(se) se.value=ps.slip||'';
+    PRODUK.forEach((p,pi)=>{
+      const k=PRODUK_KEYS[pi]; const pd=(ps.produk||{})[p]||{};
+      const te=document.getElementById('f-mkt-'+i+'-t-'+k); if(te) te.value=pd.target||'';
+      const re=document.getElementById('f-mkt-'+i+'-r-'+k); if(re) re.value=pd.realisasi||'';
+    });
+    const ne1=document.getElementById('f-mkt-'+i+'-noa-tab'); if(ne1) ne1.value=ps.noaTab||'';
+    const ne2=document.getElementById('f-mkt-'+i+'-pgl-tab'); if(ne2) ne2.value=ps.pglTab||'';
+    const ne3=document.getElementById('f-mkt-'+i+'-noa-dep'); if(ne3) ne3.value=ps.noaDep||'';
+    const ne4=document.getElementById('f-mkt-'+i+'-pgl-dep'); if(ne4) ne4.value=ps.pglDep||'';
+  });
+  // AO per-staff
+  const aoStaff=ao.staff||[];
+  const aoPs=ao.perStaff||{};
+  document.getElementById('f-ao-s0').value=aoStaff[0]||'';
+  document.getElementById('f-ao-s1').value=aoStaff[1]||'';
+  [0,1].forEach(i=>{
+    const nm=aoStaff[i]||''; const ps=aoPs[nm]||{};
+    ['pencairan','noa','pelunasan','angsuran','lancar','dpk','asset'].forEach(k=>{
+      const ep=document.getElementById('f-ao-'+i+'-'+k+'-prev'); if(ep) ep.value=ps[k+'_prev']||'';
+      const ec=document.getElementById('f-ao-'+i+'-'+k+'-curr'); if(ec) ec.value=ps[k+'_curr']||'';
+    });
+    const nkt=document.getElementById('f-ao-'+i+'-noa-kredit-target'); if(nkt) nkt.value=ps.noaKreditTarget||'';
+    const nkr=document.getElementById('f-ao-'+i+'-noa-kredit-realisasi'); if(nkr) nkr.value=ps.noaKreditRealisasi||'';
+    const pkt=document.getElementById('f-ao-'+i+'-pencairan-kredit-target'); if(pkt) pkt.value=ps.pencairanKreditTarget||'';
+    const pkr=document.getElementById('f-ao-'+i+'-pencairan-kredit-realisasi'); if(pkr) pkr.value=ps.pencairanKreditRealisasi||'';
+  });
+  // Remedial per-staff
+  const remStaff=rem.staff||[];
+  const remPs=rem.perStaff||{};
+  document.getElementById('f-rem-s0').value=remStaff[0]||'';
+  document.getElementById('f-rem-s1').value=remStaff[1]||'';
+  [0,1].forEach(i=>{
+    const nm=remStaff[i]||''; const ps=remPs[nm]||{};
+    ['kl','drg','macet'].forEach(k=>{
+      const ep=document.getElementById('f-rem-'+i+'-'+k+'-prev'); if(ep) ep.value=ps[k+'_prev']||'';
+      const ec=document.getElementById('f-rem-'+i+'-'+k+'-curr'); if(ec) ec.value=ps[k+'_curr']||'';
+  });
+  });
+  renderPenyelesaianList();
+  switchFormSubTab('mkt',0); switchFormSubTab('ao',0); switchFormSubTab('rem',0);
+}
+function saveData(){
+  var mm=getModalMonth(); if(!db[mm]) db[mm]={litigasi:[]};
+  const totalNasabah=+document.getElementById('f-op-nasabah').value||0;
+  const totalSlip=+document.getElementById('f-op-slip').value||0;
+  const hariKerja=+document.getElementById('f-op-harikerja').value||26;
+  db[mm].operasional={
+    staff:document.getElementById('f-op-staff').value,
+    totalNasabah, totalSlip, hariKerja,
+    nasabah: Math.round(totalNasabah/hariKerja*10)/10,
+    slip: Math.round(totalSlip/hariKerja*10)/10,
+    noaTabungan:+document.getElementById('f-op-noa-tab').value||0,
+    nominalTabungan:+document.getElementById('f-op-nom-tab').value||0,
+    noaDeposito:+document.getElementById('f-op-noa-dep').value||0,
+    nominalDeposito:+document.getElementById('f-op-nom-dep').value||0
+  };
+  // Marketing per-staff
+  const mkNames=[document.getElementById('f-mkt-s0').value,document.getElementById('f-mkt-s1').value];
+  const mkPs={};
+  [0,1].forEach(i=>{
+    const nm=mkNames[i]; if(!nm) return;
+    const produk={};
+    PRODUK.forEach((p,pi)=>{
+      const k=PRODUK_KEYS[pi];
+      produk[p]={target:+(document.getElementById('f-mkt-'+i+'-t-'+k)?.value||0),realisasi:+(document.getElementById('f-mkt-'+i+'-r-'+k)?.value||0)};
+    });
+    mkPs[nm]={slip:+(document.getElementById('f-mkt-'+i+'-slip')?.value||0),produk,noaTab:+(document.getElementById('f-mkt-'+i+'-noa-tab')?.value||0),pglTab:+(document.getElementById('f-mkt-'+i+'-pgl-tab')?.value||0),noaDep:+(document.getElementById('f-mkt-'+i+'-noa-dep')?.value||0),pglDep:+(document.getElementById('f-mkt-'+i+'-pgl-dep')?.value||0)};
+  });
+  db[mm].marketing={staff:mkNames, perStaff:mkPs};
+  // AO per-staff
+  const aoNames=[document.getElementById('f-ao-s0').value,document.getElementById('f-ao-s1').value];
+  const aoPs={};
+  [0,1].forEach(i=>{
+    const nm=aoNames[i]; if(!nm) return;
+    aoPs[nm]={};
+    ['pencairan','noa','pelunasan','angsuran','lancar','dpk','asset'].forEach(k=>{
+      aoPs[nm][k+'_prev']=+(document.getElementById('f-ao-'+i+'-'+k+'-prev')?.value||0);
+      aoPs[nm][k+'_curr']=+(document.getElementById('f-ao-'+i+'-'+k+'-curr')?.value||0);
+    });
+    aoPs[nm].noaKreditTarget=+(document.getElementById('f-ao-'+i+'-noa-kredit-target')?.value||0);
+    aoPs[nm].noaKreditRealisasi=+(document.getElementById('f-ao-'+i+'-noa-kredit-realisasi')?.value||0);
+    aoPs[nm].pencairanKreditTarget=+(document.getElementById('f-ao-'+i+'-pencairan-kredit-target')?.value||0);
+    aoPs[nm].pencairanKreditRealisasi=+(document.getElementById('f-ao-'+i+'-pencairan-kredit-realisasi')?.value||0);
+  });
+  db[mm].lending={staff:aoNames, perStaff:aoPs};
+  // Remedial per-staff
+  const remNames=[document.getElementById('f-rem-s0').value,document.getElementById('f-rem-s1').value];
+  const remPs={};
+  [0,1].forEach(i=>{
+    const nm=remNames[i]; if(!nm) return;
+    remPs[nm]={};
+    ['kl','drg','macet'].forEach(k=>{
+      remPs[nm][k+'_prev']=+(document.getElementById('f-rem-'+i+'-'+k+'-prev')?.value||0);
+      remPs[nm][k+'_curr']=+(document.getElementById('f-rem-'+i+'-'+k+'-curr')?.value||0);
+  });
+  });
+  db[mm].remedial={staff:remNames, perStaff:remPs};
+  localStorage.removeItem('sgm_ai_'+mm); saveDB(); closeModal('inputModal'); renderAll();
+}
+
+function saveLitigasi(){
+  if(!db[currentMonth]) db[currentMonth]={litigasi:[]};
+  if(!db[currentMonth].litigasi) db[currentMonth].litigasi=[];
+  db[currentMonth].litigasi.push({
+    nama:document.getElementById('f-lit-nama').value,
+    norek:document.getElementById('f-lit-norek').value,
+    plafon:+document.getElementById('f-lit-plafon').value||0,
+    os:+document.getElementById('f-lit-os').value||0,
+    kol:document.getElementById('f-lit-kol').value,
+    status:document.getElementById('f-lit-status').value,
+    catatan:document.getElementById('f-lit-catatan').value
+  });
+  saveDB(); closeModal('litigasiModal'); renderAll();
+  ['f-lit-nama','f-lit-norek','f-lit-plafon','f-lit-os','f-lit-catatan'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+}
+
+function renderPenyelesaianList(){
+  const el=document.getElementById('pnys-list'); if(!el) return;
+  const list=(db[currentMonth]||{}).penyelesaian||[];
+  if(!list.length){el.innerHTML='<div style="color:#aaa;font-size:12px;text-align:center;padding:8px">Belum ada data</div>';return;}
+  el.innerHTML=list.map((p,idx)=>'<div style="display:grid;grid-template-columns:1fr 0.7fr 1.2fr auto;gap:8px;align-items:center;background:#fff;border-radius:8px;padding:8px;margin-bottom:4px"><div style="font-size:12px;font-weight:600">'+p.namaDebitur+'</div><div style="font-size:12px;color:#C62828;font-weight:700">'+p.kualitasKredit+'</div><div style="font-size:12px">'+p.penyelesaian+'</div><button onclick="deletePenyelesaian('+idx+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:16px;padding:0">×</button></div>').join('');
+}
+function addPenyelesaian(){
+  const nama=document.getElementById('f-rem-pnys-nama').value.trim();
+  const kualitas=document.getElementById('f-rem-pnys-kualitas').value;
+  const penyelesaian=document.getElementById('f-rem-pnys-penyelesaian').value.trim();
+  if(!nama) return;
+  if(!db[getModalMonth()]) db[getModalMonth()]={litigasi:[],penyelesaian:[]};
+  if(!db[getModalMonth()].penyelesaian) db[getModalMonth()].penyelesaian=[];
+  db[getModalMonth()].penyelesaian.push({namaDebitur:nama,kualitasKredit:kualitas,penyelesaian:penyelesaian});
+  document.getElementById('f-rem-pnys-nama').value='';
+  document.getElementById('f-rem-pnys-kualitas').value='';
+  document.getElementById('f-rem-pnys-penyelesaian').value='';
+  renderPenyelesaianList(); renderRemedial(); saveDB();
+}
+function deletePenyelesaian(idx){
+  if(!db[getModalMonth()]||!db[getModalMonth()].penyelesaian) return;
+  db[getModalMonth()].penyelesaian.splice(idx,1);
+  renderPenyelesaianList(); renderRemedial(); saveDB();
+}
+function deleteLitigasi(idx){
+  if(!db[currentMonth]||!db[currentMonth].litigasi) return;
+  db[currentMonth].litigasi.splice(idx,1);
+  saveDB(); renderAll();
+}
+
+function destroyChart(id){ if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+function makeLine(id,labels,datasets){
+  destroyChart(id);
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'line',data:{labels,datasets:datasets.map(d=>({...d,tension:.4,fill:false,pointRadius:4,pointHoverRadius:6}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#555',font:{size:11}}}},scales:{x:{grid:{color:'#f0f0f0'},ticks:{color:'#999',font:{size:10}}},y:{grid:{color:'#f0f0f0'},ticks:{color:'#999',font:{size:10}}}}}});
+}
+
+function makeBar(id,labels,datasets,horizontal=false){
+  destroyChart(id);
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,indexAxis:horizontal?'y':'x',plugins:{legend:{labels:{color:'#555',font:{size:11}}}},scales:{x:{grid:{color:'#f0f0f0'},ticks:{color:'#999',font:{size:10}}},y:{grid:{color:'#f0f0f0'},ticks:{color:'#999',font:{size:10}}}}}});
+}
+
+function setEl(id,v){const e=document.getElementById(id);if(e)e.innerHTML=v;}
+function setTxt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+
+function renderOperasional(){
+  var months=getLast6Months();
+  var cur=getMonthData(currentMonth),prev=getMonthData(getPrevMonth(currentMonth));
+  var op=cur.operasional||{},prevOp=prev.operasional||{};
+  setTxt('opStaffName',op.staff||'-');
+  setTxt('op-nasabah',op.nasabah?op.nasabah.toFixed(1):'0');
+  setEl('op-nasabah-mom',momBadge(op.nasabah||0,prevOp.nasabah||0));
+  setTxt('op-slip',op.slip?op.slip.toFixed(1):'0');
+  setEl('op-slip-mom',momBadge(op.slip||0,prevOp.slip||0));
+  setTxt('op-noa-tab',fmt(op.noaTabungan||0));setEl('op-noa-tab-mom',momBadge(op.noaTabungan||0,prevOp.noaTabungan||0));
+  setTxt('op-nom-tab',fmtRp(op.nominalTabungan||0));setEl('op-nom-tab-mom',momBadge(op.nominalTabungan||0,prevOp.nominalTabungan||0));
+  setTxt('op-noa-dep',fmt(op.noaDeposito||0));setEl('op-noa-dep-mom',momBadge(op.noaDeposito||0,prevOp.noaDeposito||0));
+  setTxt('op-nom-dep',fmtRp(op.nominalDeposito||0));setEl('op-nom-dep-mom',momBadge(op.nominalDeposito||0,prevOp.nominalDeposito||0));
+  if(op.totalNasabah){setEl('op-total-info','Total bulan ini: <b>'+fmt(op.totalNasabah)+' nasabah</b> | <b>'+fmt(op.totalSlip||0)+' slip</b> dalam <b>'+(op.hariKerja||26)+' hari kerja</b>');}
+  else{setEl('op-total-info','Belum ada data bulan ini');}
+  var labels=months.map(function(m){return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4);});
+  makeLine('chartOpNasabah',labels,[{label:'Nasabah/Hari',data:months.map(function(m){return getMonthData(m).operasional&&getMonthData(m).operasional.nasabah||0;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.08)'}]);
+  makeLine('chartOpSetoran',labels,[{label:'Total Nasabah',data:months.map(function(m){return getMonthData(m).operasional&&getMonthData(m).operasional.totalNasabah||0;}),borderColor:'#1565C0',backgroundColor:'rgba(21,101,192,.08)'},{label:'Total Slip',data:months.map(function(m){return getMonthData(m).operasional&&getMonthData(m).operasional.totalSlip||0;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.08)'}]);
+
+  var rows=months.slice().reverse().map(function(m){var d=getMonthData(m).operasional||{};return '<tr><td>'+formatMonthLabel(m)+'</td><td>'+(d.hariKerja||'-')+'</td><td>'+fmt(d.totalNasabah||0)+'</td><td>'+(d.nasabah?d.nasabah.toFixed(1):'-')+'</td><td>'+fmt(d.totalSlip||0)+'</td><td>'+(d.slip?d.slip.toFixed(1):'-')+'</td><td>'+fmt(d.noaTabungan||0)+'</td><td>'+fmtRp(d.nominalTabungan||0)+'</td><td>'+fmt(d.noaDeposito||0)+'</td><td>'+fmtRp(d.nominalDeposito||0)+'</td><td>'+(d.staff||'-')+'</td></tr>';});
+  setEl('tbodyOp',rows.join(''));
+  if(op.nasabah){var diff=op.nasabah-(prevOp.nasabah||0);setEl('analysisOp','Rata-rata <b>'+op.nasabah.toFixed(1)+' nasabah/hari</b> dan <b>'+(op.slip||0).toFixed(1)+' slip/hari</b> dari total '+fmt(op.totalNasabah||0)+' nasabah dalam '+(op.hariKerja||26)+' hari kerja. '+(diff>=0?'Naik':'Turun')+' '+Math.abs(diff).toFixed(1)+' vs bulan lalu.');}
+  else{setEl('analysisOp','Belum ada data.');}
+}
+
+function renderMarketing(){
+  var months=getLast6Months();
+  var cur=getMonthData(currentMonth);
+  var mkStaff=(cur.marketing&&cur.marketing.staff||[]).filter(Boolean);
+  buildStaffFilterOptions('mkt',getAllStaff('marketing'));
+  var namesEl=document.getElementById('mktStaffNames');
+  if(namesEl)namesEl.innerHTML=mkStaff.length?mkStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#1565C0">'+s+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
+  var mk=getStaffData('marketing',currentMonth,filterMkt),prevMk=getStaffData('marketing',getPrevMonth(currentMonth),filterMkt);
+  setTxt('mkt-slip',mk.slip?mk.slip.toFixed(1):'0');
+  setEl('mkt-slip-mom',momBadge(mk.slip||0,prevMk.slip||0));
+  setTxt('mkt-noa-tab',fmt(mk.noaTab||0));setEl('mkt-noa-tab-mom',momBadge(mk.noaTab||0,prevMk.noaTab||0));
+  setTxt('mkt-pgl-tab',fmt(mk.pglTab||0));setEl('mkt-pgl-tab-mom',momBadge(mk.pglTab||0,prevMk.pglTab||0));
+  setTxt('mkt-noa-dep',fmt(mk.noaDep||0));setEl('mkt-noa-dep-mom',momBadge(mk.noaDep||0,prevMk.noaDep||0));
+  setTxt('mkt-pgl-dep',fmt(mk.pglDep||0));setEl('mkt-pgl-dep-mom',momBadge(mk.pglDep||0,prevMk.pglDep||0));
+  var grid=document.getElementById('produkGrid');
+  if(grid){grid.innerHTML=PRODUK.map(function(p){var pd=(mk.produk||{})[p]||{};var pct=pd.target>0?Math.round(pd.realisasi/pd.target*100):0;var col=pct>=100?'#2E7D32':pct>=70?'#F57F17':'#C62828';return '<div style="background:#F8F9FA;border-radius:10px;padding:12px;border-left:3px solid '+col+'"><div style="font-size:12px;font-weight:700;color:#333;margin-bottom:8px">'+p+'</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px"><span>Target</span><span>'+fmt(pd.target||0)+'</span></div><div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:6px"><span>Realisasi</span><span>'+fmt(pd.realisasi||0)+'</span></div><div style="height:6px;background:#eee;border-radius:3px"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+col+';border-radius:3px"></div></div><div style="text-align:right;font-size:11px;font-weight:700;color:'+col+';margin-top:3px">'+pct+'%</div></div>';}).join('');}
+  var labels=months.map(function(m){return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4);});
+  makeLine('chartMktSlip',labels,[{label:'Slip/Hari',data:months.map(function(m){return getStaffData('marketing',m,filterMkt).slip||0;}),borderColor:'#1565C0',backgroundColor:'rgba(21,101,192,.08)'}]);
+  makeBar('chartMktProduk',PRODUK.map(function(p){return p.replace('Tab ','');}), [{label:'Target',data:PRODUK.map(function(p){return (mk.produk||{})[p]&&(mk.produk||{})[p].target||0;}),backgroundColor:'rgba(21,101,192,.5)',borderRadius:3},{label:'Realisasi',data:PRODUK.map(function(p){return (mk.produk||{})[p]&&(mk.produk||{})[p].realisasi||0;}),backgroundColor:'rgba(198,40,40,.7)',borderRadius:3}]);
+
+  var rows=months.slice().reverse().map(function(m){var d=getStaffData('marketing',m,filterMkt);return '<tr><td>'+formatMonthLabel(m)+'</td><td>'+(d.slip?d.slip.toFixed(1):'-')+'</td>'+PRODUK.map(function(p){return '<td>'+fmt((d.produk||{})[p]&&(d.produk||{})[p].realisasi||0)+'</td>';}).join('')+'<td>'+fmt(d.noaTab||0)+'</td><td>'+fmt(d.pglTab||0)+'</td><td>'+fmt(d.noaDep||0)+'</td><td>'+fmt(d.pglDep||0)+'</td></tr>';});
+  setEl('tbodyMkt',rows.join(''));
+  var totalR=Object.values(mk.produk||{}).reduce(function(s,v){return s+(v.realisasi||0);},0);
+  var totalT=Object.values(mk.produk||{}).reduce(function(s,v){return s+(v.target||0);},0);
+  if(totalT){var pct=Math.round(totalR/totalT*100);setEl('analysisMkt','Pencapaian funding: <b style="color:'+(pct>=100?'#2E7D32':pct>=70?'#F57F17':'#C62828')+'">'+pct+'%</b> ('+fmt(totalR)+' dari target '+fmt(totalT)+')');}
+  else{setEl('analysisMkt','Belum ada data.');}
+}
+
+function renderLending(){
+  var months=getLast6Months();
+  var cur=getMonthData(currentMonth);
+  var aoStaff=(cur.lending&&cur.lending.staff||[]).filter(Boolean);
+  buildStaffFilterOptions('ao',getAllStaff('lending'));
+  var namesEl=document.getElementById('aoStaffNames');
+  if(namesEl)namesEl.innerHTML=aoStaff.length?aoStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#7B1FA2">'+s+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
+  var ao=getStaffData('lending',currentMonth,filterAO),prevAO=getStaffData('lending',getPrevMonth(currentMonth),filterAO);
+  setTxt('ao-pencairan',fmtRp(ao.pencairan||0));setEl('ao-pencairan-mom',momBadge(ao.pencairan||0,prevAO.pencairan||0));
+  setTxt('ao-noa',fmt(ao.noa||0));setEl('ao-noa-mom',momBadge(ao.noa||0,prevAO.noa||0));
+  setTxt('ao-pelunasan',fmt(ao.pelunasan||0));setEl('ao-pelunasan-mom',momBadge(ao.pelunasan||0,prevAO.pelunasan||0,true));
+  setTxt('ao-lancar',fmt(ao.lancar||0));setEl('ao-lancar-mom',momBadge(ao.lancar||0,prevAO.lancar||0));
+  setTxt('ao-dpk',fmt(ao.dpk||0));setEl('ao-dpk-mom',momBadge(ao.dpk||0,prevAO.dpk||0,true));
+  setTxt('ao-angsuran',fmtRp(ao.angsuran||0));setEl('ao-angsuran-mom',momBadge(ao.angsuran||0,prevAO.angsuran||0));
+  setTxt('ao-asset',fmtRp(ao.asset_curr||ao.asset||0));setEl('ao-asset-mom',momBadge(ao.asset_curr||ao.asset||0,prevAO.asset_curr||prevAO.asset||0));
+  var noaPct=ao.noaKreditTarget>0?Math.min(Math.round(ao.noaKreditRealisasi/ao.noaKreditTarget*100),100):0;
+  setTxt('ao-noa-kredit-target',fmt(ao.noaKreditTarget||0));setTxt('ao-noa-kredit-real',fmt(ao.noaKreditRealisasi||0));
+  var nBar=document.getElementById('ao-noa-kredit-bar');if(nBar)nBar.style.width=noaPct+'%';setTxt('ao-noa-kredit-pct',noaPct+'%');
+  var pcPct=ao.pencairanKreditTarget>0?Math.min(Math.round(ao.pencairanKreditRealisasi/ao.pencairanKreditTarget*100),100):0;
+  setTxt('ao-pencairan-kredit-target',fmtRp(ao.pencairanKreditTarget||0));setTxt('ao-pencairan-kredit-real',fmtRp(ao.pencairanKreditRealisasi||0));
+  var pcBar=document.getElementById('ao-pencairan-kredit-bar');if(pcBar)pcBar.style.width=pcPct+'%';setTxt('ao-pencairan-kredit-pct',pcPct+'%');
+  var labels=months.map(function(m){return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4);});
+  makeLine('chartAOPencairan',labels,[{label:'Pencairan',data:months.map(function(m){return getStaffData('lending',m,filterAO).pencairan||0;}),borderColor:'#AD1457',backgroundColor:'rgba(173,20,87,.08)'},{label:'NOA',data:months.map(function(m){return getStaffData('lending',m,filterAO).noa||0;}),borderColor:'#1565C0',backgroundColor:'rgba(21,101,192,.08)'}]);
+  makeLine('chartAOKolekt',labels,[{label:'Lancar',data:months.map(function(m){return getStaffData('lending',m,filterAO).lancar||0;}),borderColor:'#2E7D32',backgroundColor:'rgba(46,125,50,.08)'},{label:'DPK',data:months.map(function(m){return getStaffData('lending',m,filterAO).dpk||0;}),borderColor:'#F57F17',backgroundColor:'rgba(245,127,23,.08)'}]);
+  var rows=months.slice().reverse().map(function(m){var d=getStaffData('lending',m,filterAO);var meta=getMonthData(m).lending||{};var staff=(meta.staff||[]).filter(Boolean);return '<tr><td>'+formatMonthLabel(m)+'</td><td>'+fmt(d.noaKreditRealisasi||0)+'</td><td>'+fmtRp(d.pencairanKreditRealisasi||0)+'</td><td>'+fmtRp(d.pencairan_curr||d.pencairan||0)+'</td><td>'+fmt(d.noa_curr||d.noa||0)+'</td><td>'+fmt(d.pelunasan_curr||d.pelunasan||0)+'</td><td>'+fmt(d.lancar_curr||d.lancar||0)+'</td><td>'+fmt(d.dpk_curr||d.dpk||0)+'</td><td>'+fmtRp(d.angsuran_curr||d.angsuran||0)+'</td><td>'+fmtRp(d.asset_curr||d.asset||0)+'</td><td>'+(filterAO!=='all'?filterAO:(staff.join(', ')||'-'))+'</td></tr>';});
+  setEl('tbodyAO',rows.join(''));
+  if(ao.pencairan){setEl('analysisAO','Pencairan: <b>'+fmtRp(ao.pencairan)+'</b>, NOA: <b>'+fmt(ao.noa||0)+'</b>, Lancar: <b>'+fmt(ao.lancar||0)+'</b>, DPK: <b style="color:#F57F17">'+fmt(ao.dpk||0)+'</b>.');}
+  else{setEl('analysisAO','Belum ada data.');}
+}
+
+function renderRemedial(){
+  var months=getLast6Months();
+  var cur=getMonthData(currentMonth);
+  var remStaff=(cur.remedial&&cur.remedial.staff||[]).filter(Boolean);
+  buildStaffFilterOptions('rem',getAllStaff('remedial'));
+  var namesEl=document.getElementById('remStaffNames');
+  if(namesEl)namesEl.innerHTML=remStaff.length?remStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#C62828">'+s+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
+  var rem=getStaffData('remedial',currentMonth,filterRem),prevRem=getStaffData('remedial',getPrevMonth(currentMonth),filterRem);
+  setTxt('rem-kl',fmt(rem.kl||0));setEl('rem-kl-mom',momBadge(rem.kl||0,prevRem.kl||0,true));
+  setTxt('rem-drg',fmt(rem.drg||0));setEl('rem-drg-mom',momBadge(rem.drg||0,prevRem.drg||0,true));
+  setTxt('rem-macet',fmt(rem.macet||0));setEl('rem-macet-mom',momBadge(rem.macet||0,prevRem.macet||0,true));
+  var labels=months.map(function(m){return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4);});
+  makeLine('chartRemNPL',labels,[{label:'KL',data:months.map(function(m){return getStaffData('remedial',m,filterRem).kl||0;}),borderColor:'#F57F17'},{label:'DRG',data:months.map(function(m){return getStaffData('remedial',m,filterRem).drg||0;}),borderColor:'#E65100'},{label:'Macet',data:months.map(function(m){return getStaffData('remedial',m,filterRem).macet||0;}),borderColor:'#C62828'}]);
+  var lits=cur.litigasi||[];
+  var litRows=lits.map(function(l,i){return '<tr><td>'+(i+1)+'</td><td>'+(l.nama||'-')+'</td><td>'+(l.norek||'-')+'</td><td>'+fmtRp(l.plafon||0)+'</td><td>'+fmtRp(l.os||0)+'</td><td>'+(l.kol||'-')+'</td><td>'+(l.status||'-')+'</td><td><button onclick="deleteLitigasi('+i+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:13px">Hapus</button></td></tr>';});
+  setEl('tbodyLitigasi',litRows.length?litRows.join(''):'<tr><td colspan="8" style="text-align:center;color:#aaa">Belum ada data litigasi</td></tr>');
+  var rows=months.slice().reverse().map(function(m){var d=getStaffData('remedial',m,filterRem);var meta=getMonthData(m).remedial||{};var staff=(meta.staff||[]).filter(Boolean);var npl=(d.kl||0)+(d.drg||0)+(d.macet||0);var litCount=(getMonthData(m).litigasi||[]).length;return '<tr><td>'+formatMonthLabel(m)+'</td><td>'+fmt(d.kl||0)+'</td><td>'+fmt(d.drg||0)+'</td><td>'+fmt(d.macet||0)+'</td><td><b>'+fmt(npl)+'</b></td><td>'+litCount+'</td><td>'+(filterRem!=='all'?filterRem:(staff.join(', ')||'-'))+'</td></tr>';});
+  setEl('tbodyRem',rows.join(''));
+  var pnys=(cur.penyelesaian||[]);
+  var pnysRows=pnys.map(function(p){return '<div style="display:grid;grid-template-columns:1.2fr 0.6fr 1.4fr;gap:8px;align-items:center;padding:10px 8px;border-bottom:1px solid #fce4ec"><div style="font-size:13px;font-weight:600">'+p.namaDebitur+'</div><div style="font-size:12px;color:#C62828;font-weight:700;text-align:center">'+p.kualitasKredit+'</div><div style="font-size:12px;color:#555">'+p.penyelesaian+'</div></div>';});
+  setEl('tbodyPenyelesaian',pnysRows.length?'<div style="display:grid;grid-template-columns:1.2fr 0.6fr 1.4fr;gap:8px;padding:6px 8px;background:#FCE4EC;border-radius:6px;margin-bottom:4px"><div style="font-size:11px;font-weight:700;color:#C62828">NAMA DEBITUR</div><div style="font-size:11px;font-weight:700;color:#C62828;text-align:center">KUALITAS</div><div style="font-size:11px;font-weight:700;color:#C62828">PENYELESAIAN</div></div>'+pnysRows.join(''):'<div style="color:#aaa;font-size:12px;text-align:center;padding:8px">Belum ada data</div>');
+  var npl=(rem.kl||0)+(rem.drg||0)+(rem.macet||0);
+  if(npl){var pnpl=(prevRem.kl||0)+(prevRem.drg||0)+(prevRem.macet||0);var diff=npl-pnpl;setEl('analysisRem','NPL: <b style="color:#C62828">'+fmt(npl)+' debitur</b> (KL:'+rem.kl+', DRG:'+rem.drg+', Macet:'+rem.macet+'). '+(diff>0?'<span style="color:#C62828">Naik':'<span style="color:#2E7D32">Turun')+' '+Math.abs(diff)+' dbt vs bulan lalu.</span>');}
+  else{setEl('analysisRem','Belum ada data.');}
+}
+
+function renderAll(){
+  const ml=document.getElementById('dash-month-label');
+  if(ml) ml.textContent=formatMonthLabel(currentMonth);
+  renderDashboard(); renderOperasional(); renderMarketing(); renderLending(); renderRemedial(); renderCatatanList(); if(!_aiRunning&&!_aiDone){renderLaporan();}
+}
+
+function renderDashboard(){
+  const months=getLast6Months();
+  const labels=months.map(m=>MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4));
+  const cur=getMonthData(currentMonth); const prev=getMonthData(getPrevMonth(currentMonth));
+  const curMkt=getStaffData('marketing',currentMonth,'all');
+  const prevMkt=getStaffData('marketing',getPrevMonth(currentMonth),'all');
+  const curAO=getStaffData('lending',currentMonth,'all');
+  const prevAO=getStaffData('lending',getPrevMonth(currentMonth),'all');
+  const curRem=getStaffData('remedial',currentMonth,'all');
+  const prevRem=getStaffData('remedial',getPrevMonth(currentMonth),'all');
+
+  const nas=cur.operasional?.nasabah||0; setTxt('kpi-nasabah',fmt(nas)+' org/hr'); setEl('kpi-nasabah-mom',momBadge(nas,prev.operasional?.nasabah));
+  const tf=Object.values(curMkt.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0);
+  const pf=Object.values(prevMkt.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0);
+  setTxt('kpi-funding',fmt(tf)); setEl('kpi-funding-mom',momBadge(tf,pf));
+  const pc=curAO.pencairan||0; setTxt('kpi-pencairan',fmtRp(pc)); setEl('kpi-pencairan-mom',momBadge(pc,prevAO.pencairan));
+  const npl=(curRem.kl||0)+(curRem.drg||0)+(curRem.macet||0);
+  const pnpl=(prevRem.kl||0)+(prevRem.drg||0)+(prevRem.macet||0);
+  setTxt('kpi-npl',fmt(npl)+' dbt'); setEl('kpi-npl-mom',momBadge(npl,pnpl,true));
+
+  makeLine('chartNasabah',labels,[{label:'Nasabah/Hari',data:months.map(m=>getMonthData(m).operasional?.nasabah||0),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.08)'}]);
+  makeBar('chartFunding',PRODUK.map(p=>p.replace('Tab ','')), [{label:'Realisasi',data:PRODUK.map(p=>curMkt.produk?.[p]?.realisasi||0),backgroundColor:'rgba(21,101,192,.7)',borderRadius:4}]);
+  makeLine('chartPencairan',labels,[{label:'Pencairan',data:months.map(m=>getStaffData('lending',m,'all').pencairan||0),borderColor:'#AD1457',backgroundColor:'rgba(173,20,87,.08)'}]);
+  makeLine('chartNPL',labels,[
+    {label:'KL',data:months.map(m=>getStaffData('remedial',m,'all').kl||0),borderColor:'#F57F17'},
+    {label:'DRG',data:months.map(m=>getStaffData('remedial',m,'all').drg||0),borderColor:'#E65100'},
+    {label:'Macet',data:months.map(m=>getStaffData('remedial',m,'all').macet||0),borderColor:'#C62828'}
+  ]);
+  generateSummary(cur,curMkt,curAO,curRem);
+}
+
+function generateSummary(cur,curMkt,curAO,curRem){
+  const op=cur.operasional||{};
+  if(!op.nasabah&&!curAO.pencairan&&!curRem.kl){ setEl('summaryText','<span style="color:#aaa">Belum ada data untuk bulan ini. Silakan input data terlebih dahulu.</span>'); return; }
+  const lines=[];
+  if(op.nasabah){
+    lines.push('• Operasional mencatat rata-rata <b>'+op.nasabah.toFixed(1)+' nasabah/hari</b> dan <b>'+(op.slip||0).toFixed(1)+' slip/hari</b> dari total '+fmt(op.totalNasabah||0)+' nasabah dalam '+(op.hariKerja||26)+' hari kerja.');
+  }
+  var totalR=Object.values(curMkt.produk||{}).reduce(function(s,v){return s+(v.realisasi||0);},0);
+  var totalT=Object.values(curMkt.produk||{}).reduce(function(s,v){return s+(v.target||0);},0);
+  if(totalT){ var pct=Math.round(totalR/totalT*100); lines.push('• Marketing mencapai <b>'+pct+'% target funding</b> ('+fmt(totalR)+' dari '+fmt(totalT)+').'); }
+  if(curAO.pencairan) lines.push('• AO Lending mencairkan <b>'+fmtRp(curAO.pencairan)+'</b>, NOA: '+fmt(curAO.noa||0)+', Lancar: '+fmt(curAO.lancar||0)+', DPK: <span style="color:#F57F17">'+fmt(curAO.dpk||0)+'</span>.');
+  var npl=(curRem.kl||0)+(curRem.drg||0)+(curRem.macet||0);
+  if(npl){
+    lines.push('• NPL: <b style="color:#C62828">'+fmt(npl)+' debitur</b> (KL:'+fmt(curRem.kl||0)+', DRG:'+fmt(curRem.drg||0)+', Macet:'+fmt(curRem.macet||0)+').');
+    var lit=(cur.litigasi||[]).length; if(lit) lines.push('• '+lit+' debitur litigasi dalam proses hukum.');
+  }
+  setEl('summaryText',lines.join('<br>')||'<span style="color:#aaa">Data belum lengkap.</span>');
+}
+
+function genAnalisis(op,mkCum,aoCum,remCum,pnys,prevOp,prevMkCum,prevAoCum,prevRemCum){
+
+  prevOp=prevOp||{};prevMkCum=prevMkCum||{};prevAoCum=prevAoCum||{};prevRemCum=prevRemCum||{};
+  var S='padding:8px 12px;border-left:3px solid #1565C0;margin-bottom:10px;font-size:12px;line-height:1.8';
+  var h='';
+  h+='<div style="'+S+'"><b>Operasional Kas:</b> ';
+  if(op.totalNasabah){
+    h+='Selama '+(op.hariKerja||26)+' hari kerja, Kantor Kas Segamas melayani total <b>'+fmt(op.totalNasabah)+'</b> nasabah (rata-rata <b>'+(op.nasabah||0).toFixed(1)+'</b>/hari). Total slip diproses <b>'+fmt(op.totalSlip||0)+'</b> slip (rata-rata <b>'+(op.slip||0).toFixed(1)+'</b>/hari).';
+    if(prevOp.nasabah){var dN=(op.nasabah||0)-prevOp.nasabah;h+=' <b style="color:'+(dN>=0?'#2E7D32':'#C62828')+'">'+(dN>=0?'Naik':'Turun')+' '+Math.abs(dN).toFixed(1)+'</b> nasabah/hari vs bulan lalu ('+(prevOp.nasabah||0).toFixed(1)+'/hari).';}
+  }else{h+='Data operasional belum diinput.';}
+  h+='</div>';
+  var prods=PRODUK.map(function(p){return {n:p,d:(mkCum.produk&&mkCum.produk[p])||{}};});
+  var ok=prods.filter(function(p){return p.d.target>0&&(p.d.realisasi||0)>=p.d.target;});
+  var low=prods.filter(function(p){return p.d.target>0&&(p.d.realisasi||0)<p.d.target*0.7;});
+  var totalR=Object.values(mkCum.produk||{}).reduce(function(s,v){return s+(v.realisasi||0);},0);
+  var totalT=Object.values(mkCum.produk||{}).reduce(function(s,v){return s+(v.target||0);},0);
+  var prevTotalR=Object.values(prevMkCum.produk||{}).reduce(function(s,v){return s+(v.realisasi||0);},0);
+  h+='<div style="'+S+'"><b>Marketing / Funding:</b> ';
+  if(prods.some(function(p){return p.d.target>0;})){
+    var pct=totalT>0?Math.round(totalR/totalT*100):0;
+    h+='Pencapaian <b style="color:'+(pct>=100?'#2E7D32':pct>=70?'#F57F17':'#C62828')+'">'+pct+'%</b> dari target ('+fmt(totalR)+' dari '+fmt(totalT)+'). ';
+    if(ok.length)h+='Mencapai target: <b>'+ok.map(function(x){return x.n;}).join(', ')+'</b>. ';
+    if(low.length)h+='Di bawah 70% target: <b>'+low.map(function(x){return x.n;}).join(', ')+'</b>. ';
+    if(prevTotalR){var dF=totalR-prevTotalR;h+='Total realisasi <b style="color:'+(dF>=0?'#2E7D32':'#C62828')+'">'+(dF>=0?'naik':'turun')+' '+fmt(Math.abs(dF))+'</b> vs bulan lalu ('+fmt(prevTotalR)+').';}
+  }else{h+='Data marketing belum diinput.';}
+  h+='</div>';
+  h+='<div style="'+S+'"><b>AO Lending:</b> ';
+  var curPC=aoCum.pencairan_curr||aoCum.pencairan||0;var prevPC=prevAoCum.pencairan_curr||prevAoCum.pencairan||0;
+  var curNOA=aoCum.noa_curr||aoCum.noa||0;var prevNOA=prevAoCum.noa_curr||prevAoCum.noa||0;
+  if(curPC||curNOA){
+    h+='Pencairan kredit <b>'+fmtRp(curPC)+'</b>';
+    if(prevPC){var dPC=curPC-prevPC;h+=' (<b style="color:'+(dPC>=0?'#2E7D32':'#C62828')+'">'+(dPC>=0?'naik':'turun')+' '+fmtRp(Math.abs(dPC))+'</b> vs bulan lalu)';}
+    h+=', NOA <b>'+fmt(curNOA)+'</b>';
+    if(prevNOA){var dNOA=curNOA-prevNOA;h+=' ('+(dNOA>=0?'naik':'turun')+' '+Math.abs(dNOA)+')';}
+    h+='. Angsuran: <b>'+fmtRp(aoCum.angsuran_curr||aoCum.angsuran||0)+'</b>. Lancar: <b>'+fmt(aoCum.lancar_curr||aoCum.lancar||0)+'</b>, DPK: <b>'+fmt(aoCum.dpk_curr||aoCum.dpk||0)+'</b>.';
+  }else{h+='Data AO Lending belum diinput.';}
+  h+='</div>';
+  var curKL=remCum.kl_curr||remCum.kl||0,curDRG=remCum.drg_curr||remCum.drg||0,curMC=remCum.macet_curr||remCum.macet||0;
+  var tnpl=curKL+curDRG+curMC;
+  var prevKL=prevRemCum.kl_curr||prevRemCum.kl||0,prevDRG=prevRemCum.drg_curr||prevRemCum.drg||0,prevMC=prevRemCum.macet_curr||prevRemCum.macet||0;
+  var pnpl=prevKL+prevDRG+prevMC;
+  h+='<div style="'+S.replace('#1565C0','#C62828')+'"><b>Remedial:</b> ';
+  if(tnpl>0){
+    h+='Total NPL: <b>'+fmt(tnpl)+'</b> debitur (KL: '+fmt(curKL)+', DRG: '+fmt(curDRG)+', Macet: '+fmt(curMC)+').';
+    if(pnpl){var dNPL=tnpl-pnpl;h+=' <b style="color:'+(dNPL<=0?'#2E7D32':'#C62828')+'">'+(dNPL>0?'Naik':'Turun')+' '+Math.abs(dNPL)+'</b> vs bulan lalu ('+fmt(pnpl)+').';}
+    if(pnys&&pnys.length){h+=' Penyelesaian: '+pnys.map(function(p){return p.namaDebitur+' - '+p.penyelesaian;}).join('; ');}
+  }else{h+='Tidak ada kredit bermasalah atau data belum diinput.';}
+  h+='</div>';
+  return h;
+}
+function genDitingkatkan(mkCum,aoCum,remCum,prevMkCum,prevAoCum,prevRemCum){
+  prevMkCum=prevMkCum||{};prevAoCum=prevAoCum||{};prevRemCum=prevRemCum||{};
+  var items=[];
+  var prods=PRODUK.map(function(p){return {n:p,d:(mkCum.produk&&mkCum.produk[p])||{}};});
+  var low=prods.filter(function(p){return p.d.target>0&&(p.d.realisasi||0)<p.d.target*0.7;});
+  if(low.length)items.push('Peningkatan pencapaian produk funding yang masih di bawah 70% target: <b>'+low.map(function(x){return x.n;}).join(', ')+'</b>.');
+  var curDPK=aoCum.dpk_curr||aoCum.dpk||0;var prevDPK=prevAoCum.dpk_curr||prevAoCum.dpk||0;
+  if(curDPK>0)items.push('Penanganan intensif debitur DPK (<b>'+fmt(curDPK)+'</b> debitur'+(prevDPK?', bulan lalu '+fmt(prevDPK):'')+')'+(curDPK>prevDPK?' — <b style="color:#C62828">meningkat, perlu perhatian khusus</b>.':'.'));
+  var curMC=remCum.macet_curr||remCum.macet||0;var prevMC=prevRemCum.macet_curr||prevRemCum.macet||0;
+  if(curMC>0)items.push('Percepatan penyelesaian kredit macet (<b>'+fmt(curMC)+'</b> debitur'+(prevMC?', bulan lalu '+fmt(prevMC):'')+')'+(curMC>prevMC?' — <b style="color:#C62828">meningkat</b>, perlu restrukturisasi atau jalur hukum.':' melalui restrukturisasi atau jalur hukum.'));
+  var curKL=remCum.kl_curr||remCum.kl||0;var curDRG=remCum.drg_curr||remCum.drg||0;
+  if(curKL+curDRG>0)items.push('Pembinaan rutin nasabah KL (<b>'+fmt(curKL)+'</b>) dan DRG (<b>'+fmt(curDRG)+'</b>) untuk mencegah eskalasi kolektabilitas.');
+  var curPC=aoCum.pencairan_curr||aoCum.pencairan||0;var prevPC=prevAoCum.pencairan_curr||prevAoCum.pencairan||0;
+  if(prevPC&&curPC<prevPC)items.push('Pencairan kredit menurun dari <b>'+fmtRp(prevPC)+'</b> ke <b>'+fmtRp(curPC)+'</b> — perlu upaya peningkatan pemasaran kredit.');
+  if(!items.length)items.push('Pertahankan dan tingkatkan kinerja yang sudah baik pada semua lini pelayanan.');
+  return items.map(function(it,i){return '<div style="padding:6px 10px;border-left:3px solid #E65100;margin-bottom:6px;font-size:12px"><b>'+(i+1)+'.</b> '+it+'</div>';}).join('');
+}
+function genPerbaikan(mkCum,aoCum,remCum,prevMkCum,prevAoCum,prevRemCum){
+  prevMkCum=prevMkCum||{};prevAoCum=prevAoCum||{};prevRemCum=prevRemCum||{};
+  var steps=[];
+  var prods=PRODUK.map(function(p){return {n:p,d:(mkCum.produk&&mkCum.produk[p])||{}};});
+  var low=prods.filter(function(p){return p.d.target>0&&(p.d.realisasi||0)<p.d.target*0.7;});
+  if(low.length)steps.push('Intensifikasi kunjungan dan sosialisasi produk '+low.map(function(x){return x.n;}).join(', ')+' kepada calon nasabah potensial.');
+  var tnpl=(remCum.kl_curr||remCum.kl||0)+(remCum.drg_curr||remCum.drg||0)+(remCum.macet_curr||remCum.macet||0);
+  var pnpl=(prevRemCum.kl_curr||prevRemCum.kl||0)+(prevRemCum.drg_curr||prevRemCum.drg||0)+(prevRemCum.macet_curr||prevRemCum.macet||0);
+  if(tnpl>0){steps.push('Membuat jadwal penagihan dan kunjungan debitur bermasalah minimal 2x per minggu'+(tnpl>pnpl?' — NPL meningkat dari '+fmt(pnpl)+' ke '+fmt(tnpl)+' debitur.':'.'));}
+  if((remCum.macet_curr||remCum.macet||0)>0)steps.push('Koordinasi dengan Kepala Cabang untuk tindak lanjut kredit macet: restrukturisasi, write-off, atau jalur hukum.');
+  var curDPK=aoCum.dpk_curr||aoCum.dpk||0;
+  if(curDPK>0)steps.push('Monitoring ketat debitur DPK ('+fmt(curDPK)+' debitur): notifikasi H-7 dan H-3 sebelum tanggal angsuran.');
+  steps.push('Rapat koordinasi mingguan antara AO Lending, Marketing, dan Remedial untuk sinkronisasi data dan strategi.');
+  steps.push('Evaluasi kinerja bulanan tiap petugas sebagai dasar pembinaan dan penetapan target bulan berikutnya.');
+  return steps.map(function(s,i){return '<div style="padding:6px 10px;border-left:3px solid #1B5E20;margin-bottom:6px;font-size:12px"><b>'+(i+1)+'.</b> '+s+'</div>';}).join('');
+}
+function buildPdfCharts(){
+  var wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;width:700px;height:600px;background:#fff;';
+  document.body.appendChild(wrap);
+  var months=getLast6Months();
+  var labels=months.map(function(m){return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4);});
+  var mkCum=getStaffData('marketing',currentMonth,'all');
+  var remAll=function(m){return getStaffData('remedial',m,'all');};
+  var cfgs=[
+    {id:'pdfC1',type:'line',label:'Tren Nasabah/Hari (MoM)',data:{labels:labels,datasets:[{label:'Nasabah/Hari',data:months.map(function(m){return getMonthData(m).operasional&&getMonthData(m).operasional.nasabah||0;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.1)',tension:.4,fill:true}]}},
+    {id:'pdfC2',type:'bar',label:'Realisasi Funding per Produk',data:{labels:PRODUK.map(function(p){return p.replace('Tab ','');}),datasets:[{label:'Target',data:PRODUK.map(function(p){return mkCum.produk&&mkCum.produk[p]&&mkCum.produk[p].target||0;}),backgroundColor:'rgba(21,101,192,.5)'},{label:'Realisasi',data:PRODUK.map(function(p){return mkCum.produk&&mkCum.produk[p]&&mkCum.produk[p].realisasi||0;}),backgroundColor:'rgba(198,40,40,.7)'}]}},
+    {id:'pdfC3',type:'line',label:'Tren Pencairan AO (MoM)',data:{labels:labels,datasets:[{label:'Pencairan',data:months.map(function(m){return getStaffData('lending',m,'all').pencairan||0;}),borderColor:'#AD1457',backgroundColor:'rgba(173,20,87,.1)',tension:.4,fill:true}]}},
+    {id:'pdfC4',type:'line',label:'Tren NPL Kolektabilitas (MoM)',data:{labels:labels,datasets:[{label:'KL',data:months.map(function(m){return remAll(m).kl||0;}),borderColor:'#F57F17',tension:.4},{label:'DRG',data:months.map(function(m){return remAll(m).drg||0;}),borderColor:'#E65100',tension:.4},{label:'Macet',data:months.map(function(m){return remAll(m).macet||0;}),borderColor:'#C62828',tension:.4}]}}
+  ];
+  var imgs={};
+  cfgs.forEach(function(c){
+    var box=document.createElement('div');box.style.cssText='width:340px;height:200px;display:inline-block;';
+    var cv=document.createElement('canvas');cv.id=c.id;box.appendChild(cv);wrap.appendChild(box);
+    var ch=new Chart(cv,{type:c.type,data:c.data,options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+    try{imgs[c.id]={src:cv.toDataURL('image/png'),label:c.label};}catch(e){}
+    ch.destroy();
+  });
+  document.body.removeChild(wrap);
+  return imgs;
+}
+function pdfChartHtml(imgs){
+  var keys=['pdfC1','pdfC2','pdfC3','pdfC4'];
+  var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  keys.forEach(function(k){
+    var d=imgs[k];if(!d||!d.src)return;
+    h+='<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#333;margin-bottom:4px">'+d.label+'</div><img src="'+d.src+'" style="width:100%;max-height:200px;object-fit:contain;border:1px solid #eee;border-radius:6px" /></div>';
+  });
+  h+='</div>';return h;
+}
+
+
+
+
+
+
+
+
+// === CATATAN KEPALA KAS ===
+function getCatatanKey(){ return 'sgm_catatan_'+currentMonth; }
+function getCatatanList(){
+  try{ return JSON.parse(localStorage.getItem(getCatatanKey())||'[]'); }catch(e){ return []; }
+}
+function saveCatatanList(list){ localStorage.setItem(getCatatanKey(),JSON.stringify(list)); }
+function renderCatatanList(){
+  var el=document.getElementById('catatanList'); if(!el) return;
+  var list=getCatatanList();
+  if(!list.length){ el.innerHTML='<div style="color:#bbb;font-size:12px;text-align:center;padding:8px">Belum ada catatan untuk bulan ini</div>'; return; }
+  var bagianLabels={operasional:'Operasional',marketing:'Marketing / Funding',lending:'AO Lending',remedial:'Remedial'};
+  var bagianColors={operasional:'#1565C0',marketing:'#3949AB',lending:'#7B1FA2',remedial:'#C62828'};
+  el.innerHTML=list.map(function(c,i){
+    var col=bagianColors[c.bagian]||'#555';
+    return '<div style="background:#F8F9FA;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:3px solid '+col+'">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+      +'<span class="chip" style="background:'+col+'15;color:'+col+';font-size:10px;font-weight:700">'+bagianLabels[c.bagian]+'</span>'
+      +'<button onclick="deleteCatatan('+i+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:14px;padding:0">×</button>'
+      +'</div>'
+      +'<div style="font-size:11px;color:#999;margin-bottom:4px">Catatan asli: <i>'+c.original+'</i></div>'
+      +'<div style="font-size:12.5px;color:#333;line-height:1.6">'+(c.refined||'<span style="color:#F57F17">Memproses...</span>')+'</div>'
+      +'</div>';
+  }).join('');
+}
+function deleteCatatan(idx){
+  var list=getCatatanList();
+  list.splice(idx,1);
+  saveCatatanList(list);
+  renderCatatanList();
+  renderLaporan();
+}
+async function submitCatatan(){
+  var bagian=document.getElementById('catatanBagian').value;
+  var input=document.getElementById('catatanInput').value.trim();
+  if(!input){ return; }
+  var btn=document.getElementById('btnCatatan');
+  btn.disabled=true; btn.innerHTML='Memproses...';
+  var list=getCatatanList();
+  var entry={bagian:bagian,original:input,refined:''};
+  list.push(entry);
+  saveCatatanList(list);
+  renderCatatanList();
+  document.getElementById('catatanInput').value='';
+  try{
+    var bagianLabels={operasional:'Operasional Kas',marketing:'Marketing / Funding',lending:'AO Lending',remedial:'Remedial'};
+    var refined=await callGPT(
+      'Kamu adalah penulis laporan resmi perbankan BPR. Tugasmu: sempurnakan catatan singkat berikut menjadi 1-2 kalimat deskriptif profesional untuk laporan bulanan kantor kas.\n\n'
+      +'Bagian: '+bagianLabels[bagian]+'\n'
+      +'Catatan asli: "'+input+'"\n\n'
+      +'ATURAN:\n'
+      +'- Gunakan bahasa Indonesia formal dan profesional\n'
+      +'- Pertahankan semua fakta/informasi dari catatan asli\n'
+      +'- Tambahkan konteks perbankan yang relevan jika perlu\n'
+      +'- Jangan tambahkan data angka yang tidak ada di catatan asli\n'
+      +'- Output HANYA kalimat hasilnya saja, tanpa penjelasan atau label\n'
+      +'- JANGAN gunakan markdown, code block, atau tag HTML'
+    );
+    refined=refined.replace(/```[^`]*```/g,'').replace(/^["']|["']$/g,'').replace(/<[^>]*>/g,'').trim();
+    list=getCatatanList();
+    if(list[list.length-1] && list[list.length-1].original===input){
+      list[list.length-1].refined=refined;
+    }
+    saveCatatanList(list);
+    renderCatatanList();
+    localStorage.removeItem('sgm_ai_'+currentMonth);
+    renderLaporan();
+  }catch(e){
+    list=getCatatanList();
+    if(list[list.length-1] && list[list.length-1].original===input){
+      list[list.length-1].refined=input;
+    }
+    saveCatatanList(list);
+    renderCatatanList();
+  }
+  btn.disabled=false;
+  btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Tambah';
+}
+function getCatatanByBagian(bagian){
+  return getCatatanList().filter(function(c){return c.bagian===bagian;}).map(function(c){return c.refined||c.original;});
+}
+function genCatatanHtml(){
+  var list=getCatatanList();
+  if(!list.length) return '';
+  var bagianLabels={operasional:'Operasional Kas',marketing:'Marketing / Funding',lending:'AO Lending',remedial:'Remedial'};
+  var bagianColors={operasional:'#1565C0',marketing:'#3949AB',lending:'#7B1FA2',remedial:'#C62828'};
+  var grouped={};
+  list.forEach(function(c){ if(!grouped[c.bagian]) grouped[c.bagian]=[]; grouped[c.bagian].push(c.refined||c.original); });
+  var h='<div style="margin-bottom:22px"><div style="font-size:14px;font-weight:700;background:#0D47A1;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VIII. CATATAN KEPALA KAS</div>';
+  Object.keys(grouped).forEach(function(bag){
+    var col=bagianColors[bag]||'#555';
+    h+='<div style="padding:10px 14px;border-left:3px solid '+col+';margin-bottom:10px;font-size:12px;line-height:1.8;background:#FAFAFA">';
+    h+='<b style="color:'+col+'">'+bagianLabels[bag]+'</b><br>';
+    grouped[bag].forEach(function(txt,i){ h+=(grouped[bag].length>1?((i+1)+'. '):'')+txt+(i<grouped[bag].length-1?'<br>':''); });
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+function momLabel(cur,prev,unit,inverse){
+  if(!prev) return '';
+  var diff=cur-prev;
+  if(diff===0) return ' <span style="color:#757575">(= vs bln lalu)</span>';
+  var pct=prev===0?(cur>0?100:0):Math.round(Math.abs(diff)/prev*100);
+  var isGood=inverse?diff<0:diff>0;
+  var col=isGood?'#2E7D32':'#C62828';
+  var arrow=diff>0?'▲':'▼';
+  return ' <span style="color:'+col+';font-weight:700">'+arrow+' '+(unit==='rp'?fmtRp(Math.abs(diff)):fmt(Math.abs(diff)))+' ('+pct+'%)</span>';
+}
+function renderLaporan(){
+  try{
+  var pdfImgs=buildPdfCharts();
+  const cur=getMonthData(currentMonth);
+  const op=cur.operasional||{},lits=cur.litigasi||[];
+  const mk=getMonthData(currentMonth).marketing||{};
+  const mkCum=getStaffData('marketing',currentMonth,'all');
+  const aoCum=getStaffData('lending',currentMonth,'all');
+  const remCum=getStaffData('remedial',currentMonth,'all');
+  const aoMeta=cur.lending||{}, remMeta=cur.remedial||{};
+  const pnys=cur.penyelesaian||[];
+  const prevM=getPrevMonth(currentMonth);
+  const prev=getMonthData(prevM);
+  const prevOp=prev.operasional||{};
+  const prevMkCum=getStaffData('marketing',prevM,'all');
+  const prevAoCum=getStaffData('lending',prevM,'all');
+  const prevRemCum=getStaffData('remedial',prevM,'all');
+  const prevTotalR=Object.values(prevMkCum.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0);
+  const TD='padding:6px 8px;border:1px solid #ccc;font-size:12px';
+  const TH=TD+';font-weight:700';
+  document.getElementById('pdfPreview').innerHTML=`
+    <div style="max-width:740px;margin:0 auto;font-family:'Times New Roman',serif;color:#000;font-size:13px;line-height:1.6">
+      <!-- HEADER -->
+      <div style="text-align:center;padding-bottom:14px;margin-bottom:24px;border-bottom:3px double #C62828">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px">
+          <img src="logo.png" alt="Logo" style="height:56px" onerror="this.style.display='none'"/>
+          <div>
+            <div style="font-size:19px;font-weight:700;letter-spacing:.8px">BPR. BANK SURYA YUDHA</div>
+            <div style="font-size:14px;color:#C62828;font-weight:700">KANTOR KAS SEGAMAS</div>
+            <div style="font-size:11px;color:#555;font-style:italic">Mitra Menjadi Sukses</div>
+          </div>
+        </div>
+        <div style="background:linear-gradient(90deg,#C62828,#8B0000);color:#fff;padding:8px;font-size:16px;font-weight:700;letter-spacing:1.5px;margin-top:10px;border-radius:2px">LAPORAN KINERJA BULANAN KANTOR KAS</div>
+        <div style="font-size:13px;margin-top:8px">Periode Laporan: <b>${formatMonthLabel(currentMonth)}</b></div>
+        <div style="font-size:12px;color:#555;margin-top:2px">Perbandingan dengan: <b>${formatMonthLabel(prevM)}</b></div>
+        <div style="font-size:11px;color:#999;margin-top:4px">Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+
+      <!-- RINGKASAN EKSEKUTIF -->
+      <div style="margin-bottom:22px;background:#F8F9FA;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:700;color:#37474F;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Ringkasan Eksekutif</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;font-size:11px">
+          <div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #C62828"><div style="color:#888;margin-bottom:4px">Nasabah/Hari</div><div style="font-size:18px;font-weight:800;color:#C62828">${(op.nasabah||0).toFixed(1)}</div>${momLabel(op.nasabah||0,prevOp.nasabah)}</div>
+          <div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #1565C0"><div style="color:#888;margin-bottom:4px">Total Funding</div><div style="font-size:14px;font-weight:800;color:#1565C0">${fmt(Object.values(mkCum.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0))}</div>${momLabel(Object.values(mkCum.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0),prevTotalR)}</div>
+          <div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #AD1457"><div style="color:#888;margin-bottom:4px">Pencairan AO</div><div style="font-size:14px;font-weight:800;color:#AD1457">${fmtRp(aoCum.pencairan||0)}</div>${momLabel(aoCum.pencairan||0,prevAoCum.pencairan||0,'rp')}</div>
+          <div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #E65100"><div style="color:#888;margin-bottom:4px">Total NPL</div><div style="font-size:18px;font-weight:800;color:#E65100">${fmt((remCum.kl||0)+(remCum.drg||0)+(remCum.macet||0))}</div>${momLabel((remCum.kl||0)+(remCum.drg||0)+(remCum.macet||0),(prevRemCum.kl||0)+(prevRemCum.drg||0)+(prevRemCum.macet||0),'',true)}</div>
+        </div>
+      </div>
+
+      ${document.getElementById('pdfOp')?.checked?`
+      <div style="margin-bottom:22px">
+        <div style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">I. OPERASIONAL KAS</div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas Operasional: <b>${op.staff||'–'}</b> &nbsp;|&nbsp; Hari Kerja: <b>${op.hariKerja||'-'} hari</b></div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr style="background:#E3F2FD"><td style="${TH};width:45%">Keterangan</td><td style="${TH};text-align:center;width:20%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:20%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:15%">Selisih</td></tr>
+          <tr><td style="${TD}">Total Nasabah</td><td style="${TD};text-align:center">${fmt(prevOp.totalNasabah||0)}</td><td style="${TD};text-align:center">${fmt(op.totalNasabah||0)}</td><td style="${TD};text-align:center">${momLabel(op.totalNasabah||0,prevOp.totalNasabah||0)}</td></tr>
+          <tr><td style="${TD}">Rata-rata Nasabah / Hari</td><td style="${TD};text-align:center">${(prevOp.nasabah||0).toFixed(1)}</td><td style="${TD};text-align:center">${(op.nasabah||0).toFixed(1)}</td><td style="${TD};text-align:center">${momLabel(op.nasabah||0,prevOp.nasabah||0)}</td></tr>
+          <tr><td style="${TD}">Total Slip</td><td style="${TD};text-align:center">${fmt(prevOp.totalSlip||0)}</td><td style="${TD};text-align:center">${fmt(op.totalSlip||0)}</td><td style="${TD};text-align:center">${momLabel(op.totalSlip||0,prevOp.totalSlip||0)}</td></tr>
+          <tr><td style="${TD}">Rata-rata Slip / Hari</td><td style="${TD};text-align:center">${(prevOp.slip||0).toFixed(1)}</td><td style="${TD};text-align:center">${(op.slip||0).toFixed(1)}</td><td style="${TD};text-align:center">${momLabel(op.slip||0,prevOp.slip||0)}</td></tr>
+          <tr><td style="${TD}">NOA Tabungan</td><td style="${TD};text-align:center">${fmt(prevOp.noaTabungan||0)}</td><td style="${TD};text-align:center">${fmt(op.noaTabungan||0)}</td><td style="${TD};text-align:center">${momLabel(op.noaTabungan||0,prevOp.noaTabungan||0)}</td></tr>
+          <tr><td style="${TD}">Nominal Tabungan</td><td style="${TD};text-align:center">${fmtRp(prevOp.nominalTabungan||0)}</td><td style="${TD};text-align:center">${fmtRp(op.nominalTabungan||0)}</td><td style="${TD};text-align:center">${momLabel(op.nominalTabungan||0,prevOp.nominalTabungan||0,'rp')}</td></tr>
+          <tr><td style="${TD}">NOA Deposito</td><td style="${TD};text-align:center">${fmt(prevOp.noaDeposito||0)}</td><td style="${TD};text-align:center">${fmt(op.noaDeposito||0)}</td><td style="${TD};text-align:center">${momLabel(op.noaDeposito||0,prevOp.noaDeposito||0)}</td></tr>
+          <tr><td style="${TD}">Nominal Deposito</td><td style="${TD};text-align:center">${fmtRp(prevOp.nominalDeposito||0)}</td><td style="${TD};text-align:center">${fmtRp(op.nominalDeposito||0)}</td><td style="${TD};text-align:center">${momLabel(op.nominalDeposito||0,prevOp.nominalDeposito||0,'rp')}</td></tr>
+        </table>
+      </div>`:''}
+
+      ${document.getElementById('pdfMkt')?.checked?`
+      <div style="margin-bottom:22px">
+        <div style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">II. MARKETING / FUNDING</div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas Funding: <b>${(mk.staff||[]).filter(Boolean).join(', ')||'–'}</b></div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr style="background:#E3F2FD"><td style="${TH}">Produk</td><td style="${TH};text-align:center">Target</td><td style="${TH};text-align:center">Realisasi Bln Lalu</td><td style="${TH};text-align:center">Realisasi Bln Ini</td><td style="${TH};text-align:center">%</td><td style="${TH};text-align:center">MoM</td></tr>
+          ${PRODUK.map(p=>{const pd=mkCum.produk?.[p]||{};const ppd=(prevMkCum.produk||{})[p]||{};const pct=pd.target>0?Math.round(pd.realisasi/pd.target*100):0;const col=pct>=100?'#2E7D32':pct>=70?'#F57F17':'#C62828';return `<tr><td style="${TD}">${p}</td><td style="${TD};text-align:center">${fmt(pd.target||0)}</td><td style="${TD};text-align:center">${fmt(ppd.realisasi||0)}</td><td style="${TD};text-align:center">${fmt(pd.realisasi||0)}</td><td style="${TD};text-align:center;font-weight:700;color:${col}">${pct}%</td><td style="${TD};text-align:center">${momLabel(pd.realisasi||0,ppd.realisasi||0)}</td></tr>`;}).join('')}
+          <tr style="background:#FFF8E1"><td style="${TH}">TOTAL</td><td style="${TH};text-align:center">${fmt(Object.values(mkCum.produk||{}).reduce((s,v)=>s+(v.target||0),0))}</td><td style="${TH};text-align:center">${fmt(prevTotalR)}</td><td style="${TH};text-align:center">${fmt(Object.values(mkCum.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0))}</td><td style="${TH};text-align:center">${(()=>{const t=Object.values(mkCum.produk||{}).reduce((s,v)=>s+(v.target||0),0);const r=Object.values(mkCum.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0);return t>0?Math.round(r/t*100)+'%':'-';})()}</td><td style="${TH};text-align:center">${momLabel(Object.values(mkCum.produk||{}).reduce((s,v)=>s+(v.realisasi||0),0),prevTotalR)}</td></tr>
+        </table>
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;font-size:11px">
+          <div style="background:#F5F5F5;padding:6px 8px;border-radius:4px;text-align:center"><div style="color:#888">NOA Tabungan</div><b>${fmt(mkCum.noaTab||0)}</b>${momLabel(mkCum.noaTab||0,prevMkCum.noaTab||0)}</div>
+          <div style="background:#F5F5F5;padding:6px 8px;border-radius:4px;text-align:center"><div style="color:#888">Pgl Tabungan</div><b>${fmt(mkCum.pglTab||0)}</b>${momLabel(mkCum.pglTab||0,prevMkCum.pglTab||0)}</div>
+          <div style="background:#F5F5F5;padding:6px 8px;border-radius:4px;text-align:center"><div style="color:#888">NOA Deposito</div><b>${fmt(mkCum.noaDep||0)}</b>${momLabel(mkCum.noaDep||0,prevMkCum.noaDep||0)}</div>
+          <div style="background:#F5F5F5;padding:6px 8px;border-radius:4px;text-align:center"><div style="color:#888">Pgl Deposito</div><b>${fmt(mkCum.pglDep||0)}</b>${momLabel(mkCum.pglDep||0,prevMkCum.pglDep||0)}</div>
+        </div>
+      </div>`:''}
+
+      ${document.getElementById('pdfAO')?.checked?`
+      <div style="margin-bottom:22px">
+        <div style="font-size:14px;font-weight:700;background:#7B1FA2;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">III. AO LENDING</div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas AO Lending: <b>${(aoMeta.staff||[]).filter(Boolean).join(', ')||'–'}</b></div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr style="background:#F3E5F5"><td style="${TH};width:40%">Keterangan</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:16%">Selisih</td></tr>
+          <tr><td style="${TD}">Pencairan Kredit</td><td style="${TD};text-align:center">${fmtRp(prevAoCum.pencairan||0)}</td><td style="${TD};text-align:center">${fmtRp(aoCum.pencairan||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.pencairan||0,prevAoCum.pencairan||0,'rp')}</td></tr>
+          <tr><td style="${TD}">NOA (Number of Account)</td><td style="${TD};text-align:center">${fmt(prevAoCum.noa||0)}</td><td style="${TD};text-align:center">${fmt(aoCum.noa||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.noa||0,prevAoCum.noa||0)}</td></tr>
+          <tr><td style="${TD}">Pelunasan</td><td style="${TD};text-align:center">${fmt(prevAoCum.pelunasan||0)}</td><td style="${TD};text-align:center">${fmt(aoCum.pelunasan||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.pelunasan||0,prevAoCum.pelunasan||0)}</td></tr>
+          <tr><td style="${TD}">Angsuran Masuk</td><td style="${TD};text-align:center">${fmtRp(prevAoCum.angsuran||0)}</td><td style="${TD};text-align:center">${fmtRp(aoCum.angsuran||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.angsuran||0,prevAoCum.angsuran||0,'rp')}</td></tr>
+          <tr><td style="${TD}">Nasabah Lancar</td><td style="${TD};text-align:center">${fmt(prevAoCum.lancar||0)}</td><td style="${TD};text-align:center">${fmt(aoCum.lancar||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.lancar||0,prevAoCum.lancar||0)}</td></tr>
+          <tr><td style="${TD}">Nasabah DPK</td><td style="${TD};text-align:center">${fmt(prevAoCum.dpk||0)}</td><td style="${TD};text-align:center">${fmt(aoCum.dpk||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.dpk||0,prevAoCum.dpk||0,'',true)}</td></tr>
+          <tr><td style="${TD}">Asset</td><td style="${TD};text-align:center">${fmtRp(prevAoCum.asset||0)}</td><td style="${TD};text-align:center">${fmtRp(aoCum.asset||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.asset||0,prevAoCum.asset||0,'rp')}</td></tr>
+        </table>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:#E8F5E9;border-radius:6px;padding:10px">
+            <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:6px">TARGET vs REALISASI — NOA Kredit</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#888"><span>Target</span><span>${fmt(aoCum.noaKreditTarget||0)}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#1565C0"><span>Realisasi</span><span>${fmt(aoCum.noaKreditRealisasi||0)}</span></div>
+            <div style="height:6px;background:#eee;border-radius:3px;margin-top:4px"><div style="height:100%;width:${aoCum.noaKreditTarget>0?Math.min(Math.round(aoCum.noaKreditRealisasi/aoCum.noaKreditTarget*100),100):0}%;background:#2E7D32;border-radius:3px"></div></div>
+            <div style="text-align:right;font-size:11px;font-weight:700;color:#2E7D32;margin-top:2px">${aoCum.noaKreditTarget>0?Math.round(aoCum.noaKreditRealisasi/aoCum.noaKreditTarget*100):0}%</div>
+          </div>
+          <div style="background:#E8F5E9;border-radius:6px;padding:10px">
+            <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:6px">TARGET vs REALISASI — Pencairan Kredit</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#888"><span>Target</span><span>${fmtRp(aoCum.pencairanKreditTarget||0)}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#1565C0"><span>Realisasi</span><span>${fmtRp(aoCum.pencairanKreditRealisasi||0)}</span></div>
+            <div style="height:6px;background:#eee;border-radius:3px;margin-top:4px"><div style="height:100%;width:${aoCum.pencairanKreditTarget>0?Math.min(Math.round(aoCum.pencairanKreditRealisasi/aoCum.pencairanKreditTarget*100),100):0}%;background:#2E7D32;border-radius:3px"></div></div>
+            <div style="text-align:right;font-size:11px;font-weight:700;color:#2E7D32;margin-top:2px">${aoCum.pencairanKreditTarget>0?Math.round(aoCum.pencairanKreditRealisasi/aoCum.pencairanKreditTarget*100):0}%</div>
+          </div>
+        </div>
+      </div>`:''}
+
+      ${document.getElementById('pdfRem')?.checked?`
+      <div style="margin-bottom:22px">
+        <div style="font-size:14px;font-weight:700;background:#C62828;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">IV. REMEDIAL</div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas AO Remedial: <b>${(remMeta.staff||[]).filter(Boolean).join(', ')||'–'}</b></div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+          <tr style="background:#FFEBEE"><td style="${TH};width:40%">Kolektabilitas</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:16%">Selisih</td></tr>
+          <tr><td style="${TD}">Kurang Lancar (KL)</td><td style="${TD};text-align:center">${fmt(prevRemCum.kl||0)}</td><td style="${TD};text-align:center">${fmt(remCum.kl||0)}</td><td style="${TD};text-align:center">${momLabel(remCum.kl||0,prevRemCum.kl||0,'',true)}</td></tr>
+          <tr><td style="${TD}">Diragukan (DRG)</td><td style="${TD};text-align:center">${fmt(prevRemCum.drg||0)}</td><td style="${TD};text-align:center">${fmt(remCum.drg||0)}</td><td style="${TD};text-align:center">${momLabel(remCum.drg||0,prevRemCum.drg||0,'',true)}</td></tr>
+          <tr><td style="${TD}">Macet</td><td style="${TD};text-align:center">${fmt(prevRemCum.macet||0)}</td><td style="${TD};text-align:center">${fmt(remCum.macet||0)}</td><td style="${TD};text-align:center">${momLabel(remCum.macet||0,prevRemCum.macet||0,'',true)}</td></tr>
+          <tr style="background:#FFF3E0"><td style="${TH}">Total NPL</td><td style="${TH};text-align:center">${fmt((prevRemCum.kl||0)+(prevRemCum.drg||0)+(prevRemCum.macet||0))}</td><td style="${TH};text-align:center">${fmt((remCum.kl||0)+(remCum.drg||0)+(remCum.macet||0))}</td><td style="${TH};text-align:center">${momLabel((remCum.kl||0)+(remCum.drg||0)+(remCum.macet||0),(prevRemCum.kl||0)+(prevRemCum.drg||0)+(prevRemCum.macet||0),'',true)}</td></tr>
+        </table>
+        ${pnys.length?`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#C62828">Penyelesaian Kredit Bermasalah:</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <tr style="background:#FCE4EC"><th style="${TH}">Nama Debitur</th><th style="${TH};text-align:center">Kualitas</th><th style="${TH}">Penyelesaian</th></tr>
+          ${pnys.map(p=>`<tr><td style="${TD}">${p.namaDebitur}</td><td style="${TD};text-align:center;font-weight:700;color:#C62828">${p.kualitasKredit}</td><td style="${TD}">${p.penyelesaian}</td></tr>`).join('')}
+        </table></div>`:''}
+        ${lits.length?`<div style="font-size:12px;font-weight:700;margin-bottom:6px">Debitur Litigasi (${lits.length}):</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <tr style="background:#FFEBEE"><th style="${TH}">No</th><th style="${TH}">Nama</th><th style="${TH}">No. Rek</th><th style="${TH}">Plafon</th><th style="${TH}">Outstanding</th><th style="${TH}">Kol.</th><th style="${TH}">Status</th></tr>
+          ${lits.map((l,i)=>`<tr><td style="${TD}">${i+1}</td><td style="${TD}">${l.nama}</td><td style="${TD}">${l.norek||'–'}</td><td style="${TD}">${fmtRp(l.plafon)}</td><td style="${TD}">${fmtRp(l.os)}</td><td style="${TD}">${l.kol}</td><td style="${TD}">${l.status}</td></tr>`).join('')}
+        </table>`:''}
+      </div>`:''}
+
+      <div style="margin-top:24px;padding-top:16px;border-top:2px solid #C62828">
+        <div style="font-size:14px;font-weight:700;background:#37474F;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">V. ANALISIS DATA DESKRIPTIF</div>
+        <div data-ai-section="analisis" style="font-size:12px;line-height:1.7">${genAnalisis(op,mkCum,aoCum,remCum,pnys,prevOp,prevMkCum,prevAoCum,prevRemCum)}</div>
+        <div style="margin-top:14px">
+          <div style="font-size:12px;font-weight:700;color:#37474F;margin-bottom:8px;border-bottom:1px solid #ddd;padding-bottom:4px">Grafik Tren Kinerja (6 Bulan Terakhir)</div>
+          ${pdfChartHtml(pdfImgs)}
+        </div>
+      </div>
+
+      <div style="margin-top:18px">
+        <div style="font-size:14px;font-weight:700;background:#E65100;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VI. HAL-HAL YANG HARUS DITINGKATKAN</div>
+        <div data-ai-section="ditingkatkan">${genDitingkatkan(mkCum,aoCum,remCum,prevMkCum,prevAoCum,prevRemCum)}</div>
+      </div>
+
+      <div style="margin-top:18px">
+        <div style="font-size:14px;font-weight:700;background:#1B5E20;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VII. LANGKAH PERBAIKAN</div>
+        <div data-ai-section="perbaikan">${genPerbaikan(mkCum,aoCum,remCum,prevMkCum,prevAoCum,prevRemCum)}</div>
+      </div>
+
+      ${genCatatanHtml()}
+
+      <div style="margin-top:50px;display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px">
+        <div style="text-align:center">
+          <div style="font-weight:600">Mengetahui,</div>
+          <div style="margin:52px 0 4px;border-bottom:1px solid #000;display:inline-block;padding-bottom:2px"><b>Rojikin</b></div>
+          <div style="font-size:11px;color:#555">Kepala Cabang</div>
+        </div>
+        <div style="text-align:center">
+          <div>Purbalingga, ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+          <div style="margin-top:6px;font-weight:600">Dibuat Oleh,</div>
+          <div style="margin:44px 0 4px;border-bottom:1px solid #000;display:inline-block;padding-bottom:2px"><b>Sofyan Harlis Subekti</b></div>
+          <div style="font-size:11px;color:#555">Kepala Kas</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;text-align:center;font-size:9px;color:#bbb;border-top:1px solid #eee;padding-top:8px">
+        Dokumen ini digenerate secara otomatis oleh SGM Office — BPR Bank Surya Yudha Kantor Kas Segamas
+      </div>
+    </div>`;
+  setTimeout(generateAIAnalysis,200);
+  }catch(e){console.error('renderLaporan:',e);}
+}
+
+async function generatePDF(){
+  const btn=event.target; btn.disabled=true; btn.textContent='Memproses...';
+  renderLaporan(); await new Promise(r=>setTimeout(r,500));
+  try{
+    const canvas=await html2canvas(document.getElementById('pdfPreview'),{scale:2,backgroundColor:'#fff',useCORS:true});
+    const {jsPDF}=window.jspdf; const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const w=210,h=canvas.height*w/canvas.width; let y=0;
+    while(y<h){ if(y>0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/jpeg',.95),'JPEG',0,-y,w,h); y+=297; }
+    pdf.save(`Laporan_BPR_${currentMonth}.pdf`);
+  }catch(e){ alert('Gagal generate PDF. Gunakan tombol Print sebagai alternatif.'); }
+  btn.disabled=false; btn.innerHTML='<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
+}
+
+function printReport(){
+  renderLaporan();
+  const content=document.getElementById('pdfPreview').innerHTML;
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Laporan BPR ${formatMonthLabel(currentMonth)}</title><style>body{font-family:'Times New Roman',serif;margin:20mm}@media print{body{margin:10mm}}</style></head><body>${content}</body></html>`);
+  win.document.close(); win.focus(); setTimeout(()=>win.print(),500);
+}
+
+function checkResize(){
+  const sm=window.innerWidth<768;
+  document.getElementById('menuBtn').style.display=sm?'block':'none';
+  document.getElementById('mainWrap').style.marginLeft=sm?'0':'240px';
+  if(!sm) document.getElementById('sidebar').classList.remove('open');
+}
+window.addEventListener('resize',checkResize);
+checkResize();
+
+// === GPT INTEGRATION ===
+
+function getApiKey(){return atob('c2stcHJvai1YVTlUTFFMWFl1Z09qenBXSkVYRVhUc1hIempQcUY4dzc2eVM0cktKNENUSzlGTldNU2RTeHRGanNSRS1QazNtN1NnT2lvS08xSlQzQmxia0ZKMkhhblJ0WUh4TWZUejdsU1N0Y1E3V2R2Q2EtWUFXY0o4bWVSQV9oREZueGdKNW01T3lUcW5FS2k1c2lKS0N6YXVkbUtfXzJRTUE=');}
+
+
+
+
+
+
+
+
+async function callGPT(prompt){
+  var key=getApiKey();
+  if(!key) throw new Error('API key belum diset');
+  var res=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:'Kamu adalah Analis Keuangan Senior BPR (Bank Perkreditan Rakyat) dengan pengalaman 15+ tahun. Tugas: menyusun analisis laporan kinerja bulanan kantor kas dengan standar berikut:\n- Gunakan bahasa Indonesia formal dan profesional layaknya laporan resmi perbankan\n- Setiap poin analisis WAJIB mencantumkan data angka aktual dan perbandingan Month-over-Month (MoM)\n- Gunakan istilah perbankan yang tepat (NOA, NPL, kolektabilitas, DPK, outstanding, restrukturisasi, dll)\n- Berikan interpretasi terhadap kenaikan/penurunan data, bukan hanya menyebutkan angka\n- Sertakan implikasi bisnis dari setiap perubahan data\n- Format output: HTML murni dengan inline style, JANGAN gunakan markdown atau code block'},{role:'user',content:prompt}],temperature:0.6,max_tokens:3000})
+  });
+  if(!res.ok){var err=await res.json();throw new Error(err.error?.message||'API error');}
+  var data=await res.json();
+  return data.choices[0].message.content;
+}
+
+var _aiRunning=false,_aiDone=false;
+async function generateAIAnalysis(){
+  if(_aiRunning) return;
+  var preview=document.getElementById('pdfPreview');
+  if(!preview||!preview.innerHTML.trim()) return;
+  var aiDivs=preview.querySelectorAll('[data-ai-section]');
+  if(!aiDivs.length) return;
+
+  var cacheKey='sgm_ai_'+currentMonth;
+  var cached=localStorage.getItem(cacheKey);
+  if(cached){
+    try{var c=JSON.parse(cached);aiDivs.forEach(function(d){if(c[d.dataset.aiSection])d.innerHTML=c[d.dataset.aiSection];});_aiDone=true;return;}catch(e){}
+  }
+  _aiRunning=true;
+
+  try{
+    var cur=getMonthData(currentMonth);
+
+
+
+
+    var prev=getMonthData(getPrevMonth(currentMonth));
+    var op=cur.operasional||{};var prevOp=prev.operasional||{};
+    var mkCum=getStaffData('marketing',currentMonth,'all');
+    var prevMkCum=getStaffData('marketing',getPrevMonth(currentMonth),'all');
+    var aoCum=getStaffData('lending',currentMonth,'all');
+    var prevAoCum=getStaffData('lending',getPrevMonth(currentMonth),'all');
+    var remCum=getStaffData('remedial',currentMonth,'all');
+    var prevRemCum=getStaffData('remedial',getPrevMonth(currentMonth),'all');
+    var pnys=cur.penyelesaian||[];
+    var totalR=Object.values(mkCum.produk||{}).reduce(function(s,v){return s+(v.realisasi||0);},0);
+    var totalT=Object.values(mkCum.produk||{}).reduce(function(s,v){return s+(v.target||0);},0);
+    var prevTotalR=Object.values(prevMkCum.produk||{}).reduce(function(s,v){return s+(v.realisasi||0);},0);
+    var npl=(remCum.kl||0)+(remCum.drg||0)+(remCum.macet||0);
+    var pnpl=(prevRemCum.kl||0)+(prevRemCum.drg||0)+(prevRemCum.macet||0);
+    if(!op.totalNasabah&&!totalR&&!(aoCum.pencairan||aoCum.noa)&&!npl){_aiRunning=false;return;}
+    var prevLabel=formatMonthLabel(getPrevMonth(currentMonth));
+    var curLabel=formatMonthLabel(currentMonth);
+    var p='LAPORAN KINERJA BULANAN — Kantor Kas Segamas, BPR Bank Surya Yudha\n';
+    p+='Periode: '+curLabel+' | Pembanding: '+prevLabel+'\n\n';
+    p+='===== DATA PERBANDINGAN MONTH-OVER-MONTH (MoM) =====\n\n';
+    p+='1. OPERASIONAL KAS:\n';
+    p+='   - Hari kerja: '+(op.hariKerja||0)+' hari (lalu: '+(prevOp.hariKerja||0)+')\n';
+    p+='   - Total nasabah: '+fmt(op.totalNasabah||0)+' (lalu: '+fmt(prevOp.totalNasabah||0)+') → selisih '+(op.totalNasabah||0)-(prevOp.totalNasabah||0)+'\n';
+    p+='   - Avg nasabah/hari: '+(op.nasabah||0).toFixed(1)+' (lalu: '+(prevOp.nasabah||0).toFixed(1)+')\n';
+    p+='   - Total slip: '+fmt(op.totalSlip||0)+' (lalu: '+fmt(prevOp.totalSlip||0)+')\n';
+    p+='   - Avg slip/hari: '+(op.slip||0).toFixed(1)+' (lalu: '+(prevOp.slip||0).toFixed(1)+')\n';
+    p+='   - NOA Tabungan: '+fmt(op.noaTabungan||0)+' (lalu: '+fmt(prevOp.noaTabungan||0)+')\n';
+    p+='   - Nominal Tabungan: '+fmtRp(op.nominalTabungan||0)+' (lalu: '+fmtRp(prevOp.nominalTabungan||0)+')\n';
+    p+='   - NOA Deposito: '+fmt(op.noaDeposito||0)+' (lalu: '+fmt(prevOp.noaDeposito||0)+')\n';
+    p+='   - Nominal Deposito: '+fmtRp(op.nominalDeposito||0)+' (lalu: '+fmtRp(prevOp.nominalDeposito||0)+')\n\n';
+    p+='2. MARKETING / FUNDING:\n';
+    p+='   - Total Target: '+fmt(totalT)+', Total Realisasi: '+fmt(totalR)+' (lalu: '+fmt(prevTotalR)+'), Pencapaian: '+(totalT>0?Math.round(totalR/totalT*100):0)+'%\n';
+    p+='   - Detail per produk:\n';
+    PRODUK.forEach(function(pr){var d=(mkCum.produk||{})[pr]||{};var pd=(prevMkCum.produk||{})[pr]||{};p+='     '+pr+': Target='+fmt(d.target||0)+', Realisasi='+fmt(d.realisasi||0)+' (lalu: '+fmt(pd.realisasi||0)+')\n';});
+    p+='   - NOA Tabungan: '+fmt(mkCum.noaTab||0)+' (lalu: '+fmt(prevMkCum.noaTab||0)+')\n';
+    p+='   - Pengelolaan Tabungan: '+fmt(mkCum.pglTab||0)+' (lalu: '+fmt(prevMkCum.pglTab||0)+')\n';
+    p+='   - NOA Deposito: '+fmt(mkCum.noaDep||0)+' (lalu: '+fmt(prevMkCum.noaDep||0)+')\n';
+    p+='   - Pengelolaan Deposito: '+fmt(mkCum.pglDep||0)+' (lalu: '+fmt(prevMkCum.pglDep||0)+')\n\n';
+    p+='3. AO LENDING:\n';
+    p+='   - Pencairan: '+fmtRp(aoCum.pencairan||0)+' (lalu: '+fmtRp(prevAoCum.pencairan||0)+')\n';
+    p+='   - NOA: '+fmt(aoCum.noa||0)+' (lalu: '+fmt(prevAoCum.noa||0)+')\n';
+    p+='   - Pelunasan: '+fmt(aoCum.pelunasan||0)+' (lalu: '+fmt(prevAoCum.pelunasan||0)+')\n';
+    p+='   - Angsuran masuk: '+fmtRp(aoCum.angsuran||0)+' (lalu: '+fmtRp(prevAoCum.angsuran||0)+')\n';
+    p+='   - Nasabah Lancar: '+fmt(aoCum.lancar||0)+' (lalu: '+fmt(prevAoCum.lancar||0)+')\n';
+    p+='   - Nasabah DPK: '+fmt(aoCum.dpk||0)+' (lalu: '+fmt(prevAoCum.dpk||0)+')\n';
+    p+='   - Asset: '+fmtRp(aoCum.asset||0)+' (lalu: '+fmtRp(prevAoCum.asset||0)+')\n';
+    p+='   - Target NOA Kredit: '+fmt(aoCum.noaKreditTarget||0)+', Realisasi: '+fmt(aoCum.noaKreditRealisasi||0)+'\n';
+    p+='   - Target Pencairan Kredit: '+fmtRp(aoCum.pencairanKreditTarget||0)+', Realisasi: '+fmtRp(aoCum.pencairanKreditRealisasi||0)+'\n\n';
+    p+='4. REMEDIAL (NPL):\n';
+    p+='   - KL: '+fmt(remCum.kl||0)+' debitur (lalu: '+fmt(prevRemCum.kl||0)+')\n';
+    p+='   - DRG: '+fmt(remCum.drg||0)+' debitur (lalu: '+fmt(prevRemCum.drg||0)+')\n';
+    p+='   - Macet: '+fmt(remCum.macet||0)+' debitur (lalu: '+fmt(prevRemCum.macet||0)+')\n';
+    p+='   - Total NPL: '+fmt(npl)+' debitur (lalu: '+fmt(pnpl)+') → selisih '+(npl-pnpl)+'\n';
+    if(pnys.length)p+='   - Penyelesaian kredit bermasalah: '+pnys.map(function(x){return x.namaDebitur+' ('+x.kualitasKredit+') → '+x.penyelesaian;}).join('; ')+'\n';
+    p+='\n===== INSTRUKSI OUTPUT =====\n';
+    p+='Susun 3 bagian analisis dalam HTML MURNI (langsung tag HTML, JANGAN pakai markdown/code block):\n\n';
+    p+='1. ANALISIS DATA DESKRIPTIF\n';
+    p+='   - Buat 4 sub-bagian: Operasional Kas, Marketing/Funding, AO Lending, Remedial\n';
+    p+='   - Tiap sub-bagian dalam: <div style="padding:10px 14px;border-left:3px solid #1565C0;margin-bottom:12px;font-size:12px;line-height:1.9;background:#FAFAFA">\n';
+    p+='   - Awali dengan <b>judul tebal</b>, contoh: <b>A. Operasional Kas</b>\n';
+    p+='   - WAJIB cantumkan angka aktual DAN perbandingan bulan lalu di setiap poin\n';
+    p+='   - Gunakan <b style="color:#2E7D32"> untuk kenaikan positif, <b style="color:#C62828"> untuk penurunan negatif\n';
+    p+='   - Berikan interpretasi bisnis (contoh: "kenaikan nasabah mengindikasikan efektivitas program promosi")\n\n';
+    p+='2. HAL-HAL YANG HARUS DITINGKATKAN\n';
+    p+='   - 4-6 poin bernomor, tiap poin dalam: <div style="padding:8px 12px;border-left:3px solid #E65100;margin-bottom:8px;font-size:12px;line-height:1.7">\n';
+    p+='   - Sebutkan data spesifik yang mendasari rekomendasi\n\n';
+    p+='3. LANGKAH PERBAIKAN\n';
+    p+='   - 4-6 poin bernomor, tiap poin dalam: <div style="padding:8px 12px;border-left:3px solid #1B5E20;margin-bottom:8px;font-size:12px;line-height:1.7">\n';
+    p+='   - Berikan langkah konkret dan terukur, bukan saran umum\n\n';
+    p+='PISAHKAN bagian dengan teks: ANALISIS DATA DESKRIPTIF, HAL-HAL YANG HARUS DITINGKATKAN, LANGKAH PERBAIKAN.';
+    var result=await callGPT(p);
+
+    result=result.replace(/```html\n?/gi,'').replace(/```\n?/g,'').replace(/<\/?html>/gi,'').replace(/<\/?body>/gi,'').trim();
+    var parts=result.split(/(?=HAL.HAL YANG HARUS|LANGKAH PERBAIKAN)/i);
+    var a1=(parts[0]||result).replace(/.*?ANALISIS DATA DESKRIPTIF[:\s]*/i,'').trim();
+    var a2=(parts[1]||'').replace(/.*?HAL.HAL YANG HARUS DITINGKATKAN[:\s]*/i,'').trim();
+    var a3=(parts[2]||'').replace(/.*?LANGKAH PERBAIKAN[:\s]*/i,'').trim();
+    function wrapPoints(txt,color){
+      var clean=txt.replace(/<[^>]*>/g,'\n').replace(/\n{2,}/g,'\n').trim();
+      var items=clean.split('\n').filter(function(l){return l.trim().length>0;});
+      return items.map(function(item,i){
+        var t=item.replace(/^\d+[\.\)]\s*/,'').trim();
+        return '<div style="padding:8px 12px;border-left:3px solid '+color+';margin-bottom:8px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+t+'</div>';
+      }).join('');
+    }
+    function wrapAnalisis(txt){
+      var labels=['Operasional','Marketing','AO Lending','Remedial'];
+      var re=new RegExp('(?=<b>(?:[A-D]\\.\\s*)?(?:'+labels.join('|')+'))', 'gi');
+      var raw=txt.replace(/<div[^>]*>/gi,'').replace(/<\/div>/gi,'\n');
+      var chunks=raw.split(re).filter(function(c){return c.trim().length>0;});
+      if(chunks.length<2) return txt;
+      return chunks.map(function(chunk){
+        return '<div style="padding:10px 14px;border-left:3px solid #1565C0;margin-bottom:12px;font-size:12px;line-height:1.9;background:#FAFAFA">'+chunk.trim()+'</div>';
+      }).join('');
+    }
+    a1=wrapAnalisis(a1);
+    a2=wrapPoints(a2,'#E65100');
+    a3=wrapPoints(a3,'#1B5E20');
+    aiDivs.forEach(function(d){
+      if(d.dataset.aiSection==='analisis')d.innerHTML=a1;
+      if(d.dataset.aiSection==='ditingkatkan')d.innerHTML=a2;
+      if(d.dataset.aiSection==='perbaikan')d.innerHTML=a3;
+    });
+    var cacheData={};
+    aiDivs.forEach(function(d){cacheData[d.dataset.aiSection]=d.innerHTML;});
+    try{localStorage.setItem(cacheKey,JSON.stringify(cacheData));}catch(e){}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  }catch(e){
+    console.error('AI error:',e);aiDivs.forEach(function(d){d.innerHTML='<div style="color:#C62828;font-size:12px;padding:8px">AI Error: '+e.message+'</div>';});
+
+  }
+  _aiRunning=false;
+}
+init();
+</script>
+</body>
+</html>
