@@ -57,6 +57,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#F0F2F5;color:#1a1a2
 
 /* INPUTS */
 input,select,textarea{background:#fff;border:1.5px solid #ddd;color:#1a1a2e;border-radius:9px;padding:9px 13px;font-size:13.5px;width:100%;outline:none;transition:border-color .2s}
+select.sel-blue{background:#1565C0 !important;color:#fff !important;border-color:#1565C0 !important;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 12px center !important;padding-right:32px !important}
 input:focus,select:focus,textarea:focus{border-color:#1565C0;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
 label{font-size:11.5px;color:#555;font-weight:600;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.04em}
 
@@ -438,7 +439,7 @@ tr:hover td{background:#FFF8F8}
         <div style="font-size:11.5px;color:#888;margin-bottom:14px;line-height:1.5">Tambahkan catatan singkat (bisa dengan kata-kata seadanya). Sistem akan otomatis menyempurnakan menjadi kalimat profesional untuk laporan.</div>
         <div style="margin-bottom:10px">
           <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.04em">Pilih Bagian</label>
-          <select id="catatanBagian" style="max-width:240px;padding:9px 12px;border:1.5px solid #1565C0;border-radius:8px;font-size:13px;font-weight:600;color:#fff;background:#1565C0">
+          <select id="catatanBagian" class="sel-blue" style="max-width:240px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600">
             <option value="operasional">Operasional</option>
             <option value="marketing">Marketing / Funding</option>
             <option value="lending">AO Lending</option>
