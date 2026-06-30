@@ -785,11 +785,12 @@ function buildStaffFilterOptions(mod, staff){
   else filterRem=newVal;
 }
 
-function saveDB(){
+function saveDB(month){
+  var syncMonth=month||currentMonth;
   localStorage.setItem('sgm_bpr',JSON.stringify(db));
-  if(db[currentMonth]){
-    var d=JSON.parse(JSON.stringify(db[currentMonth]));
-    fsDB.collection('sgm_bpr').doc(currentMonth).set(d)
+  if(db[syncMonth]){
+    var d=JSON.parse(JSON.stringify(db[syncMonth]));
+    fsDB.collection('sgm_bpr').doc(syncMonth).set(d)
       .catch(function(e){console.error('Firestore save error:',e);});
   }
 }
@@ -825,9 +826,7 @@ function init(){
   db=JSON.parse(localStorage.getItem('sgm_bpr')||'{}');
   renderAll();
   fsDB.collection('sgm_bpr').onSnapshot(function(snap){
-    var fresh={};
-    snap.forEach(function(doc){fresh[doc.id]=doc.data();});
-    db=fresh;
+    snap.forEach(function(doc){db[doc.id]=doc.data();});
     localStorage.setItem('sgm_bpr',JSON.stringify(db));
     renderAll();
   },function(e){console.error('Firestore listen error:',e);});
@@ -1022,7 +1021,7 @@ function saveData(){
   });
   });
   db[mm].remedial={staff:remNames, perStaff:remPs};
-  localStorage.removeItem('sgm_ai_'+mm); saveDB(); closeModal('inputModal'); renderAll();
+  localStorage.removeItem('sgm_ai_'+mm); saveDB(mm); closeModal('inputModal'); renderAll();
 }
 
 function saveLitigasi(){
