@@ -1453,7 +1453,7 @@ async function saveEditCatatan(idx){
   try{
     var bagianLabels={operasional:'Operasional Kas',marketing:'Marketing / Funding',lending:'AO Lending',remedial:'Remedial'};
     var refined=await callGPT(
-      'Kamu adalah penulis laporan resmi perbankan BPR. Tugasmu: sempurnakan catatan singkat berikut menjadi 1-2 kalimat deskriptif profesional untuk laporan bulanan kantor kas.\n\n'
+      'Kamu adalah penulis laporan resmi perbankan BPR. Tugasmu: sempurnakan catatan singkat berikut menjadi narasi deskriptif profesional untuk laporan bulanan kantor kas.\n\n'
       +'Bagian: '+bagianLabels[entry.bagian]+'\n'
       +'Catatan asli: "'+input+'"\n\n'
       +'ATURAN:\n'
@@ -1461,10 +1461,12 @@ async function saveEditCatatan(idx){
       +'- Pertahankan semua fakta/informasi dari catatan asli\n'
       +'- Tambahkan konteks perbankan yang relevan jika perlu\n'
       +'- Jangan tambahkan data angka yang tidak ada di catatan asli\n'
-      +'- Output HANYA kalimat hasilnya saja, tanpa penjelasan atau label\n'
+      +'- Jika catatan asli berisi BEBERAPA poin terpisah (bernomor atau dipisah baris baru), JANGAN digabung jadi satu kalimat panjang dengan koma — tulis ulang tiap poin sebagai kalimat sendiri, satu poin per baris, diawali nomor "1. ", "2. ", dst.\n'
+      +'- Jika catatan asli hanya membahas satu hal, cukup 1-2 kalimat mengalir tanpa nomor\n'
+      +'- Output HANYA hasil narasinya saja, tanpa penjelasan atau label\n'
       +'- JANGAN gunakan markdown, code block, atau tag HTML'
     );
-    refined=refined.replace(/```[^`]*```/g,'').replace(/^["']|["']$/g,'').replace(/<[^>]*>/g,'').trim();
+    refined=refined.replace(/```[^`]*```/g,'').replace(/^["']|["']$/g,'').replace(/<[^>]*>/g,'').trim().replace(/\n+/g,'<br>');
     list=getCatatanList();
     if(list[idx]){ list[idx].refined=refined; }
     saveCatatanList(list);
@@ -1493,7 +1495,7 @@ async function submitCatatan(){
   try{
     var bagianLabels={operasional:'Operasional Kas',marketing:'Marketing / Funding',lending:'AO Lending',remedial:'Remedial'};
     var refined=await callGPT(
-      'Kamu adalah penulis laporan resmi perbankan BPR. Tugasmu: sempurnakan catatan singkat berikut menjadi 1-2 kalimat deskriptif profesional untuk laporan bulanan kantor kas.\n\n'
+      'Kamu adalah penulis laporan resmi perbankan BPR. Tugasmu: sempurnakan catatan singkat berikut menjadi narasi deskriptif profesional untuk laporan bulanan kantor kas.\n\n'
       +'Bagian: '+bagianLabels[bagian]+'\n'
       +'Catatan asli: "'+input+'"\n\n'
       +'ATURAN:\n'
@@ -1501,10 +1503,12 @@ async function submitCatatan(){
       +'- Pertahankan semua fakta/informasi dari catatan asli\n'
       +'- Tambahkan konteks perbankan yang relevan jika perlu\n'
       +'- Jangan tambahkan data angka yang tidak ada di catatan asli\n'
-      +'- Output HANYA kalimat hasilnya saja, tanpa penjelasan atau label\n'
+      +'- Jika catatan asli berisi BEBERAPA poin terpisah (bernomor atau dipisah baris baru), JANGAN digabung jadi satu kalimat panjang dengan koma — tulis ulang tiap poin sebagai kalimat sendiri, satu poin per baris, diawali nomor "1. ", "2. ", dst.\n'
+      +'- Jika catatan asli hanya membahas satu hal, cukup 1-2 kalimat mengalir tanpa nomor\n'
+      +'- Output HANYA hasil narasinya saja, tanpa penjelasan atau label\n'
       +'- JANGAN gunakan markdown, code block, atau tag HTML'
     );
-    refined=refined.replace(/```[^`]*```/g,'').replace(/^["']|["']$/g,'').replace(/<[^>]*>/g,'').trim();
+    refined=refined.replace(/```[^`]*```/g,'').replace(/^["']|["']$/g,'').replace(/<[^>]*>/g,'').trim().replace(/\n+/g,'<br>');
     list=getCatatanList();
     if(list[list.length-1] && list[list.length-1].original===input){
       list[list.length-1].refined=refined;
