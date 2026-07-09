@@ -1398,6 +1398,16 @@ function initCatatanSync(){
     if(!_aiRunning&&!_aiDone) renderLaporan();
   },function(e){console.error('Catatan listen error:',e);});
 }
+function renderCatatanBody(txt){
+  var lines=String(txt||'').split(/<br\s*\/?>/i).map(function(l){return l.trim();}).filter(Boolean);
+  if(!lines.length) return '';
+  if(lines.length===1 && !/^\d+[\.\)]\s/.test(lines[0])) return '<div style="text-align:justify">'+lines[0]+'</div>';
+  return lines.map(function(line){
+    var m=line.match(/^(\d+)[\.\)]\s*(.*)$/);
+    if(m) return '<div style="padding-left:20px;text-indent:-20px;text-align:justify;margin-bottom:4px">'+m[1]+'. '+m[2]+'</div>';
+    return '<div style="text-align:justify;margin-bottom:4px">'+line+'</div>';
+  }).join('');
+}
 function renderCatatanList(){
   var el=document.getElementById('catatanList'); if(!el) return;
   var list=getCatatanList();
@@ -1415,7 +1425,7 @@ function renderCatatanList(){
       +'</div></div>'
       +'<div id="catatan-view-'+i+'">'
       +'<div style="font-size:11px;color:#999;margin-bottom:4px">Catatan asli: <i>'+c.original+'</i></div>'
-      +'<div style="font-size:12.5px;color:#333;line-height:1.6">'+(c.refined||'<span style="color:#F57F17">Memproses...</span>')+'</div>'
+      +'<div style="font-size:12.5px;color:#333;line-height:1.6">'+(c.refined?renderCatatanBody(c.refined):'<span style="color:#F57F17">Memproses...</span>')+'</div>'
       +'</div>'
       +'<div id="catatan-edit-'+i+'" style="display:none">'
       +'<textarea id="catatan-editbox-'+i+'" rows="2" style="width:100%;margin-bottom:8px;resize:vertical;min-height:42px">'+c.original+'</textarea>'
@@ -1543,7 +1553,7 @@ function genCatatanHtml(){
     var col=bagianColors[bag]||'#555';
     h+='<div style="padding:10px 14px;border-left:3px solid '+col+';margin-bottom:10px;font-size:12px;line-height:1.8;background:#FAFAFA">';
     h+='<b style="color:'+col+'">'+bagianLabels[bag]+'</b><br>';
-    grouped[bag].forEach(function(txt,i){ h+=(grouped[bag].length>1?((i+1)+'. '):'')+txt+(i<grouped[bag].length-1?'<br>':''); });
+    grouped[bag].forEach(function(txt,i){ h+='<div style="margin-top:'+(i>0?'8px':'0')+'">'+renderCatatanBody(txt)+'</div>'; });
     h+='</div>';
   });
   h+='</div>';
