@@ -28,10 +28,23 @@ tersimpan di riwayat git.
 
 Gratis, tanpa kartu kredit, siap dalam beberapa menit.
 
-```bash
+Jalankan **satu per satu** (jangan disambung dengan `&&` — PowerShell 5.1 di
+Windows tidak mengenalnya, dan dua perintah di bawah bersifat interaktif):
+
+```
 cd proxy
+```
+```
 npx wrangler login
-npx wrangler secret put OPENAI_API_KEY     # tempel key BARU saat diminta
+```
+Browser terbuka untuk izin akses akun Cloudflare.
+
+```
+npx wrangler secret put OPENAI_API_KEY
+```
+Muncul prompt `Enter a secret value:` — tempel key OpenAI yang **baru**, lalu Enter.
+
+```
 npx wrangler deploy
 ```
 
@@ -45,7 +58,7 @@ https://sgm-ai-proxy.NAMA-AKUN.workers.dev
 
 Tanpa ini, siapa pun yang tahu URL proxy bisa memakai kuota Anda.
 
-```bash
+```
 npx wrangler kv namespace create RATE
 ```
 
@@ -60,10 +73,17 @@ per IP per jam; ubah lewat `RATE_MAX` / `RATE_WINDOW` di `cloudflare-worker.js`.
 Cocok bila ingin satu atap dengan Firestore yang sudah dipakai.
 **Perlu paket Blaze** karena fungsi harus memanggil layanan di luar Google.
 
-```bash
-firebase init functions          # Node 20
-cp proxy/firebase-function.js functions/index.js
+Satu per satu juga:
+
+```
+firebase init functions
+```
+Pilih Node 20. Lalu salin `proxy/firebase-function.js` menjadi `functions/index.js`.
+
+```
 firebase functions:secrets:set OPENAI_API_KEY
+```
+```
 firebase deploy --only functions:aiProxy
 ```
 
