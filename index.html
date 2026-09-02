@@ -1597,10 +1597,44 @@ function buildRangeFieldUI(){
           return '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;font-weight:500;color:#555;text-transform:none;letter-spacing:0;margin-bottom:0">'+
             '<input type="checkbox" id="rngF-'+f.id+'" checked onchange="rngSyncSection(\''+s.key+'\')" style="width:auto;accent-color:'+s.color+'"> '+f.label+'</label>';
         }).join('')+
-      '</div></div>';
+      '</div>'+
+      '<div style="margin:10px 0 0 24px">'+
+        '<label style="font-size:11px;color:#777;font-weight:600;text-transform:none;letter-spacing:0;margin-bottom:4px;display:block">Analisa / catatan tambahan '+s.label+'</label>'+
+        '<textarea id="rngNote-'+s.key+'" rows="3" placeholder="Tulis penjelasan Anda di sini. Satu baris = satu poin, akan tampil bernomor di PDF." '+
+        'style="width:100%;resize:vertical;min-height:56px;font-size:12px;padding:8px 10px;border-radius:8px"></textarea>'+
+      '</div>'+
+      '</div>';
   }).join('');
+  RNG_SEC.forEach(function(s){
+    var t=document.getElementById('rngNote-'+s.key); if(!t) return;
+    try{ t.value=localStorage.getItem('sgm_rngnote_'+s.key)||''; }catch(e){}
+    t.addEventListener('input',function(){ rngSaveNote(s.key); });
+  });
   rngPaintAll();
   refreshRangeStaffOptions();
+}
+function rngSaveNote(key){
+  var t=document.getElementById('rngNote-'+key); if(!t) return;
+  try{ localStorage.setItem('sgm_rngnote_'+key,t.value); }catch(e){}
+}
+function rngGetNote(key){
+  var t=document.getElementById('rngNote-'+key);
+  return t?t.value.trim():'';
+}
+function rngEsc(x){
+  return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Tiap baris tak kosong jadi satu poin bernomor
+function rngNoteHtml(txt,color){
+  var lines=String(txt||'').split(/\r?\n/)
+                           .map(function(x){ return x.replace(/^\s*\d+[\.\)]\s*/,'').trim(); })
+                           .filter(function(x){ return x.length>0; });
+  if(!lines.length) return '';
+  return '<div style="margin-top:10px">'+
+    '<div style="font-size:12px;font-weight:700;margin-bottom:6px">Analisa / Catatan</div>'+
+    lines.map(function(t,i){
+      return '<div style="padding:7px 11px;border-left:3px solid '+color+';background:#FAFAFA;margin-bottom:6px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+rngEsc(t)+'</div>';
+    }).join('')+'</div>';
 }
 function refreshRangeStaffOptions(){
   var months=getRangeMonths();
@@ -1642,10 +1676,11 @@ function rngCheckAll(on){
 }
 
 function getRangeSelection(){
-  var sec={}, fld={}, staff={};
+  var sec={}, fld={}, staff={}, notes={};
   RNG_SEC.forEach(function(s){
     var stEl=document.getElementById('rngStaff-'+s.key);
     staff[s.key]=(s.perStaff&&stEl&&stEl.value)?stEl.value:'all';
+    notes[s.key]=rngGetNote(s.key);
     var se=document.getElementById(s.id);
     var picked=s.fields.filter(function(f){ var e=document.getElementById('rngF-'+f.id); return e?e.checked:true; });
     sec[s.key]=(se?se.checked:true)&&picked.length>0;
@@ -1654,7 +1689,7 @@ function getRangeSelection(){
       fld[f.id]=sec[s.key]&&(e?e.checked:true);
     });
   });
-  return {sec:sec,fld:fld,staff:staff};
+  return {sec:sec,fld:fld,staff:staff,notes:notes};
 }
 function rngPickedSections(sel){ return RNG_SEC.filter(function(s){ return sel.sec[s.key]; }); }
 function rngPickedCols(s,sel){
@@ -1957,6 +1992,7 @@ function buildRangeReportHtml(months,sel){
     var extra='';
     if(s.key==='mkt'&&sel.fld.mktProduk) extra+='<div style="font-size:12px;font-weight:700;margin:12px 0 6px">Rekapitulasi per Produk (akumulasi periode)</div>'+rngTableProduk(months,TD,TH,sf);
     if(s.key==='rem'&&sel.fld.remLitList) extra+=rngTableLitigasi(months,TD,TH);
+    extra+=rngNoteHtml((sel.notes||{})[s.key],s.color);
     body+='<div style="margin-bottom:22px">'+
       '<div style="font-size:14px;font-weight:700;background:'+s.color+';color:#fff;padding:6px 12px;margin-bottom:10px;border-radius:2px">'+RNG_ROMAN[n-1]+'. '+s.label.toUpperCase()+'</div>'+
       '<div style="margin-bottom:8px;font-size:12px">'+staffLbl+': <b>'+staffTxt+'</b></div>'+
@@ -2088,6 +2124,17 @@ function buildRangePrompt(months,sel){
       p+='  '+rngLabel(m)+': '+b.join(', ')+'\n';
     });
   }
+  var adaCatatan=rngPickedSections(sel).filter(function(x){ return ((sel.notes||{})[x.key]||'').trim(); });
+  if(adaCatatan.length){
+    p+='\n===== CATATAN DARI PETUGAS =====\n';
+    p+='Berikut penjelasan tertulis dari petugas kantor kas. Pertimbangkan sebagai konteks dan latar belakang di balik angka; jangan diabaikan, tetapi jangan disalin mentah-mentah.\n';
+    adaCatatan.forEach(function(x){
+      p+='\n'+x.label+':\n';
+      ((sel.notes||{})[x.key]||'').split(/\r?\n/).forEach(function(b){
+        if(b.trim()) p+='  - '+b.trim()+'\n';
+      });
+    });
+  }
   p+='\n===== INSTRUKSI OUTPUT =====\n';
   p+='Susun 3 bagian analisis dalam HTML MURNI (langsung tag HTML, JANGAN pakai markdown/code block). Jangan menulis judul dokumen atau tanggal di awal.\n\n';
   p+='1. ANALISIS DATA DESKRIPTIF\n';
@@ -2112,7 +2159,7 @@ async function generateRangeAI(months,sel){
   if(!host) return;
   var divs=host.querySelectorAll('[data-rng-ai]');
   if(!divs.length) return;
-  var fp=hashCode(months.map(function(m){return JSON.stringify(db[m]||{});}).join('|')+'|'+JSON.stringify(sel.fld)+'|'+JSON.stringify(sel.staff||{}));
+  var fp=hashCode(months.map(function(m){return JSON.stringify(db[m]||{});}).join('|')+'|'+JSON.stringify(sel.fld)+'|'+JSON.stringify(sel.staff||{})+'|'+JSON.stringify(sel.notes||{}));
   var cacheKey='sgm_rng_'+months[0]+'_'+months[months.length-1]+'_'+fp;
   try{
     var cached=localStorage.getItem(cacheKey);
