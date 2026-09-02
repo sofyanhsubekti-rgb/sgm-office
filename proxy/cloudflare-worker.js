@@ -22,7 +22,9 @@ const TEMPERATURE = 0.6;
 const MAX_PROMPT_CHARS = 20000;
 
 // Rate limit per IP (hanya aktif bila KV namespace RATE di-bind)
-const RATE_MAX = 20;        // maksimal permintaan
+// Satu kantor biasanya berbagi satu IP publik, jadi batas jangan terlalu ketat.
+// Sekali menyusun laporan = 1 permintaan, dan hasilnya di-cache di browser.
+const RATE_MAX = 60;        // maksimal permintaan
 const RATE_WINDOW = 3600;   // per berapa detik
 
 const SYSTEM_PROMPT = [

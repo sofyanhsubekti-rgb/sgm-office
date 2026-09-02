@@ -2,12 +2,11 @@ name = "sgm-ai-proxy"
 main = "cloudflare-worker.js"
 compatibility_date = "2024-11-01"
 
-# Rate limit per IP. Aktifkan dengan membuat KV namespace lalu isi id-nya:
-#   npx wrangler kv namespace create RATE
-# Salin id yang muncul ke baris di bawah, lalu hapus tanda komentarnya.
-# [[kv_namespaces]]
-# binding = "RATE"
-# id = "ISI_DENGAN_ID_KV_ANDA"
+# Rate limit per IP (aktif). Batasnya diatur lewat RATE_MAX / RATE_WINDOW
+# di cloudflare-worker.js. Id di bawah bukan rahasia, hanya penanda namespace.
+[[kv_namespaces]]
+binding = "RATE"
+id = "1ec67d5a3dad48ab8d2ac9aeed86ef85"
 
 # JANGAN menaruh API key di file ini. Set sebagai secret:
 #   npx wrangler secret put OPENAI_API_KEY

@@ -54,17 +54,23 @@ Setelah `deploy`, wrangler menampilkan URL seperti:
 https://sgm-ai-proxy.NAMA-AKUN.workers.dev
 ```
 
-### Batas pemakaian per IP (disarankan)
+### Batas pemakaian per IP — SUDAH AKTIF
 
-Tanpa ini, siapa pun yang tahu URL proxy bisa memakai kuota Anda.
+KV namespace `RATE` sudah dibuat dan ter-bind di `wrangler.toml`, jadi
+pembatasan sudah berjalan: **60 permintaan per IP per jam**. Ubah lewat
+`RATE_MAX` / `RATE_WINDOW` di `cloudflare-worker.js`, lalu deploy ulang.
+
+Catatan: satu kantor umumnya berbagi satu IP publik, jadi batas dihitung
+untuk seluruh kantor, bukan per orang. Sekali menyusun laporan = 1
+permintaan, dan hasilnya di-cache di browser.
+
+Bila perlu membuat namespace baru dari nol:
 
 ```
 npx wrangler kv namespace create RATE
 ```
 
-Salin `id` yang muncul ke `wrangler.toml` (bagian `[[kv_namespaces]]` — hapus
-tanda komentarnya), lalu `npx wrangler deploy` lagi. Standarnya 20 permintaan
-per IP per jam; ubah lewat `RATE_MAX` / `RATE_WINDOW` di `cloudflare-worker.js`.
+Salin `id` yang muncul ke `wrangler.toml`, lalu deploy ulang.
 
 ---
 
