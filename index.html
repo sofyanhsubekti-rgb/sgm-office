@@ -2648,7 +2648,15 @@ checkResize();
 
 // === GPT INTEGRATION ===
 
-function getApiKey(){return atob('c2stcHJvai1YVTlUTFFMWFl1Z09qenBXSkVYRVhUc1hIempQcUY4dzc2eVM0cktKNENUSzlGTldNU2RTeHRGanNSRS1QazNtN1NnT2lvS08xSlQzQmxia0ZKMkhhblJ0WUh4TWZUejdsU1N0Y1E3V2R2Q2EtWUFXY0o4bWVSQV9oREZueGdKNW01T3lUcW5FS2k1c2lKS0N6YXVkbUtfXzJRTUE=');}
+// Alamat proxy AI. API key TIDAK pernah disimpan di halaman ini.
+// Isi dengan URL Worker/Function Anda, contoh: 'https://sgm-ai-proxy.namaakun.workers.dev'
+// Untuk uji coba bisa juga diisi lewat konsol: localStorage.setItem('sgm_proxy_url','https://...')
+var AI_PROXY_URL='';
+function getAiProxyUrl(){
+  var override='';
+  try{ override=localStorage.getItem('sgm_proxy_url')||''; }catch(e){}
+  return (override||AI_PROXY_URL||'').replace(/\/+$/,'');
+}
 
 
 
@@ -2658,16 +2666,21 @@ function getApiKey(){return atob('c2stcHJvai1YVTlUTFFMWFl1Z09qenBXSkVYRVhUc1hIem
 
 
 async function callGPT(prompt){
-  var key=getApiKey();
-  if(!key) throw new Error('API key belum diset');
-  var res=await fetch('https://api.openai.com/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:'Kamu adalah Analis Keuangan Senior BPR (Bank Perkreditan Rakyat) dengan pengalaman 15+ tahun. Tugas: menyusun analisis laporan kinerja bulanan kantor kas dengan standar berikut:\n- Gunakan bahasa Indonesia formal dan profesional layaknya laporan resmi perbankan\n- Setiap poin analisis WAJIB mencantumkan data angka aktual dan perbandingan Month-over-Month (MoM)\n- Gunakan istilah perbankan yang tepat (NOA, NPL, kolektabilitas, DPK, outstanding, restrukturisasi, dll)\n- Berikan interpretasi terhadap kenaikan/penurunan data, bukan hanya menyebutkan angka\n- Sertakan implikasi bisnis dari setiap perubahan data\n- Format output: HTML murni dengan inline style, JANGAN gunakan markdown atau code block'},{role:'user',content:prompt}],temperature:0.6,max_tokens:3000})
-  });
-  if(!res.ok){var err=await res.json();throw new Error(err.error?.message||'API error');}
-  var data=await res.json();
-  return data.choices[0].message.content;
+  var url=getAiProxyUrl();
+  if(!url) throw new Error('Proxy AI belum diatur. Isi AI_PROXY_URL pada index.html.');
+  var res;
+  try{
+    res=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:prompt})
+    });
+  }catch(e){ throw new Error('Tidak dapat menghubungi proxy AI.'); }
+  var data=null;
+  try{ data=await res.json(); }catch(e){}
+  if(!res.ok) throw new Error((data&&data.error)||('Proxy AI error '+res.status));
+  if(!data||!data.content) throw new Error('Jawaban proxy AI kosong.');
+  return data.content;
 }
 
 var _aiRunning=false,_aiDone=false;
@@ -2824,7 +2837,10 @@ async function generateAIAnalysis(){
 
 
   }catch(e){
-    console.error('AI error:',e);aiDivs.forEach(function(d){d.innerHTML='<div style="color:#C62828;font-size:12px;padding:8px">AI Error: '+e.message+'</div>';});
+    console.error('AI error:',e);
+    // Pertahankan analisa otomatis yang sudah tercetak; cukup beri catatan kecil.
+    var note='<div style="font-size:10.5px;color:#E65100;font-style:italic;margin-bottom:6px">Analisa AI tidak tersedia ('+e.message+'). Bagian ini memakai analisa otomatis dari data.</div>';
+    aiDivs.forEach(function(d){ if(!d.querySelector('[data-ai-note]')) d.insertAdjacentHTML('afterbegin',note.replace('<div ','<div data-ai-note="1" ')); });
 
   }
   _aiRunning=false;

@@ -1,0 +1,9 @@
+# Perkakas lokal Claude Code
+.claude/
+
+# Jangan pernah commit rahasia / artefak deploy proxy
+.dev.vars
+.env
+.env.*
+proxy/node_modules/
+proxy/.wrangler/
