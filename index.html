@@ -774,7 +774,8 @@ let formMktTab=0, formAOTab=0, formRemTab=0;
 
 function getStaffData(section, monthKey, staffFilter){
   const d=getMonthData(monthKey)[section]||{};
-  const staff=(d.staff||[]).filter(Boolean);
+  const staff=(d.staff||[]).map(function(x){return typeof x==='string'?x.trim():x;}).filter(Boolean)
+                           .filter(function(x,i,a){return a.indexOf(x)===i;});
   const ps=d.perStaff||{};
   if(staffFilter&&staffFilter!=='all'&&section!=='lending'&&section!=='remedial') return ps[staffFilter]||{};
   // cumulative: sum all staff
@@ -840,7 +841,7 @@ function buildStaffFilterOptions(mod, staff){
   if(!sel) return;
   const cur=sel.value;
   sel.innerHTML=`<option value="all">Kumulatif (Semua)</option>`+
-    staff.filter(Boolean).map(s=>`<option value="${s}">${s}</option>`).join('');
+    staff.filter(Boolean).map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
   const newVal=cur&&staff.includes(cur)?cur:'all';
   sel.value=newVal;
   if(mod==='mkt') filterMkt=newVal;
@@ -1076,13 +1077,33 @@ function loadFormData(){
   _formDirty=false; _formMonthLoaded=getModalMonth(); _formStamp=formStampOf(_formMonthLoaded);
   showFormNotice('');
 }
+function namaKembar(names){
+  var isi=names.map(function(x){return (x||'').trim();}).filter(Boolean);
+  for(var i=0;i<isi.length;i++) for(var j=i+1;j<isi.length;j++) if(isi[i]===isi[j]) return isi[i];
+  return '';
+}
 function saveData(){
   var mm=getModalMonth(); if(!db[mm]) db[mm]={litigasi:[]};
+  // Nama kembar akan saling menimpa karena data disimpan per nama petugas
+  var cekNama=[
+    ['Marketing / Funding',[document.getElementById('f-mkt-s0').value,document.getElementById('f-mkt-s1').value]],
+    ['AO Lending',[document.getElementById('f-ao-s0').value,document.getElementById('f-ao-s1').value]],
+    ['Remedial',[document.getElementById('f-rem-s0').value,document.getElementById('f-rem-s1').value]]
+  ];
+  for(var ci=0;ci<cekNama.length;ci++){
+    var kembar=namaKembar(cekNama[ci][1]);
+    if(kembar){
+      alert('Nama petugas "'+kembar+'" terisi dua kali di bagian '+cekNama[ci][0]+'.' +
+            '\n\nData disimpan per nama petugas, jadi bila namanya sama, data salah satu akan hilang.' +
+            '\nSilakan bedakan namanya atau kosongkan salah satu, lalu simpan lagi.');
+      return;
+    }
+  }
   const totalNasabah=+document.getElementById('f-op-nasabah').value||0;
   const totalSlip=+document.getElementById('f-op-slip').value||0;
   const hariKerja=+document.getElementById('f-op-harikerja').value||26;
   db[mm].operasional={
-    staff:document.getElementById('f-op-staff').value,
+    staff:document.getElementById('f-op-staff').value.trim(),
     totalNasabah, totalSlip, hariKerja,
     nasabah: Math.round(totalNasabah/hariKerja*10)/10,
     slip: Math.round(totalSlip/hariKerja*10)/10,
@@ -1092,7 +1113,7 @@ function saveData(){
     nominalDeposito:+document.getElementById('f-op-nom-dep').value||0
   };
   // Marketing per-staff
-  const mkNames=[document.getElementById('f-mkt-s0').value,document.getElementById('f-mkt-s1').value];
+  const mkNames=[document.getElementById('f-mkt-s0').value.trim(),document.getElementById('f-mkt-s1').value.trim()];
   const mkPs={};
   [0,1].forEach(i=>{
     const nm=mkNames[i]; if(!nm) return;
@@ -1105,7 +1126,7 @@ function saveData(){
   });
   db[mm].marketing={staff:mkNames, perStaff:mkPs};
   // AO per-staff
-  const aoNames=[document.getElementById('f-ao-s0').value,document.getElementById('f-ao-s1').value];
+  const aoNames=[document.getElementById('f-ao-s0').value.trim(),document.getElementById('f-ao-s1').value.trim()];
   const aoPs={};
   [0,1].forEach(i=>{
     const nm=aoNames[i]; if(!nm) return;
@@ -1121,7 +1142,7 @@ function saveData(){
   });
   db[mm].lending={staff:aoNames, perStaff:aoPs};
   // Remedial per-staff
-  const remNames=[document.getElementById('f-rem-s0').value,document.getElementById('f-rem-s1').value];
+  const remNames=[document.getElementById('f-rem-s0').value.trim(),document.getElementById('f-rem-s1').value.trim()];
   const remPs={};
   [0,1].forEach(i=>{
     const nm=remNames[i]; if(!nm) return;
@@ -1155,7 +1176,7 @@ function renderPenyelesaianList(){
   const el=document.getElementById('pnys-list'); if(!el) return;
   const list=(db[currentMonth]||{}).penyelesaian||[];
   if(!list.length){el.innerHTML='<div style="color:#aaa;font-size:12px;text-align:center;padding:8px">Belum ada data</div>';return;}
-  el.innerHTML=list.map((p,idx)=>'<div style="display:grid;grid-template-columns:1fr 0.7fr 1.2fr auto;gap:8px;align-items:center;background:#fff;border-radius:8px;padding:8px;margin-bottom:4px"><div style="font-size:12px;font-weight:600">'+p.namaDebitur+'</div><div style="font-size:12px;color:#C62828;font-weight:700">'+p.kualitasKredit+'</div><div style="font-size:12px">'+p.penyelesaian+'</div><button onclick="deletePenyelesaian('+idx+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:16px;padding:0">×</button></div>').join('');
+  el.innerHTML=list.map((p,idx)=>'<div style="display:grid;grid-template-columns:1fr 0.7fr 1.2fr auto;gap:8px;align-items:center;background:#fff;border-radius:8px;padding:8px;margin-bottom:4px"><div style="font-size:12px;font-weight:600">'+escHtml(p.namaDebitur)+'</div><div style="font-size:12px;color:#C62828;font-weight:700">'+escHtml(p.kualitasKredit)+'</div><div style="font-size:12px">'+escHtml(p.penyelesaian)+'</div><button onclick="deletePenyelesaian('+idx+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:16px;padding:0">×</button></div>').join('');
 }
 function addPenyelesaian(){
   const nama=document.getElementById('f-rem-pnys-nama').value.trim();
@@ -1195,6 +1216,9 @@ function makeBar(id,labels,datasets,horizontal=false){
   charts[id]=new Chart(el,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,indexAxis:horizontal?'y':'x',plugins:{legend:{labels:{color:'#555',font:{size:11}}}},scales:{x:{grid:{color:'#f0f0f0'},ticks:{color:'#999',font:{size:10}}},y:{grid:{color:'#f0f0f0'},ticks:{color:'#999',font:{size:10}}}}}});
 }
 
+function escHtml(x){
+  return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function setEl(id,v){const e=document.getElementById(id);if(e)e.innerHTML=v;}
 function setTxt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 
@@ -1217,7 +1241,7 @@ function renderOperasional(){
   makeLine('chartOpNasabah',labels,[{label:'Nasabah/Hari',data:months.map(function(m){return getMonthData(m).operasional&&getMonthData(m).operasional.nasabah||0;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.08)'}]);
   makeLine('chartOpSetoran',labels,[{label:'Total Nasabah',data:months.map(function(m){return getMonthData(m).operasional&&getMonthData(m).operasional.totalNasabah||0;}),borderColor:'#1565C0',backgroundColor:'rgba(21,101,192,.08)'},{label:'Total Slip',data:months.map(function(m){return getMonthData(m).operasional&&getMonthData(m).operasional.totalSlip||0;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.08)'}]);
 
-  var rows=months.slice().reverse().map(function(m){var d=getMonthData(m).operasional||{};return '<tr><td>'+formatMonthLabel(m)+'</td><td>'+(d.hariKerja||'-')+'</td><td>'+fmt(d.totalNasabah||0)+'</td><td>'+(d.nasabah?d.nasabah.toFixed(1):'-')+'</td><td>'+fmt(d.totalSlip||0)+'</td><td>'+(d.slip?d.slip.toFixed(1):'-')+'</td><td>'+fmt(d.noaTabungan||0)+'</td><td>'+fmtRp(d.nominalTabungan||0)+'</td><td>'+fmt(d.noaDeposito||0)+'</td><td>'+fmtRp(d.nominalDeposito||0)+'</td><td>'+(d.staff||'-')+'</td></tr>';});
+  var rows=months.slice().reverse().map(function(m){var d=getMonthData(m).operasional||{};return '<tr><td>'+formatMonthLabel(m)+'</td><td>'+(d.hariKerja||'-')+'</td><td>'+fmt(d.totalNasabah||0)+'</td><td>'+(d.nasabah?d.nasabah.toFixed(1):'-')+'</td><td>'+fmt(d.totalSlip||0)+'</td><td>'+(d.slip?d.slip.toFixed(1):'-')+'</td><td>'+fmt(d.noaTabungan||0)+'</td><td>'+fmtRp(d.nominalTabungan||0)+'</td><td>'+fmt(d.noaDeposito||0)+'</td><td>'+fmtRp(d.nominalDeposito||0)+'</td><td>'+escHtml(d.staff||'-')+'</td></tr>';});
   setEl('tbodyOp',rows.join(''));
   if(op.nasabah){var diff=op.nasabah-(prevOp.nasabah||0);setEl('analysisOp','Rata-rata <b>'+op.nasabah.toFixed(1)+' nasabah/hari</b> dan <b>'+(op.slip||0).toFixed(1)+' slip/hari</b> dari total '+fmt(op.totalNasabah||0)+' nasabah dalam '+(op.hariKerja||26)+' hari kerja. '+(diff>=0?'Naik':'Turun')+' '+Math.abs(diff).toFixed(1)+' vs bulan lalu.');}
   else{setEl('analysisOp','Belum ada data.');}
@@ -1229,7 +1253,7 @@ function renderMarketing(){
   var mkStaff=(cur.marketing&&cur.marketing.staff||[]).filter(Boolean);
   buildStaffFilterOptions('mkt',getAllStaff('marketing'));
   var namesEl=document.getElementById('mktStaffNames');
-  if(namesEl)namesEl.innerHTML=mkStaff.length?mkStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#1565C0">'+s+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
+  if(namesEl)namesEl.innerHTML=mkStaff.length?mkStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#1565C0">'+escHtml(s)+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
   var mk=getStaffData('marketing',currentMonth,filterMkt),prevMk=getStaffData('marketing',getPrevMonth(currentMonth),filterMkt);
   setTxt('mkt-slip',mk.slip?mk.slip.toFixed(1):'0');
   setEl('mkt-slip-mom',momBadge(mk.slip||0,prevMk.slip||0));
@@ -1260,7 +1284,7 @@ function renderLending(){
   var aoStaff=(cur.lending&&cur.lending.staff||[]).filter(Boolean);
   buildStaffFilterOptions('ao',getAllStaff('lending'));
   var namesEl=document.getElementById('aoStaffNames');
-  if(namesEl)namesEl.innerHTML=aoStaff.length?aoStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#7B1FA2">'+s+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
+  if(namesEl)namesEl.innerHTML=aoStaff.length?aoStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#7B1FA2">'+escHtml(s)+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
   var ao=getStaffData('lending',currentMonth,filterAO),prevAO=getStaffData('lending',getPrevMonth(currentMonth),filterAO);
   setTxt('ao-pencairan',fmtRp(ao.pencairan||0));setEl('ao-pencairan-mom',momBadge(ao.pencairan||0,prevAO.pencairan||0));
   setTxt('ao-noa',fmt(ao.noa||0));setEl('ao-noa-mom',momBadge(ao.noa||0,prevAO.noa||0));
@@ -1290,7 +1314,7 @@ function renderRemedial(){
   var remStaff=(cur.remedial&&cur.remedial.staff||[]).filter(Boolean);
   buildStaffFilterOptions('rem',getAllStaff('remedial'));
   var namesEl=document.getElementById('remStaffNames');
-  if(namesEl)namesEl.innerHTML=remStaff.length?remStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#C62828">'+s+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
+  if(namesEl)namesEl.innerHTML=remStaff.length?remStaff.map(function(s){return '<span style="font-size:14px;font-weight:700;color:#C62828">'+escHtml(s)+'</span>';}).join('<span style="color:#ccc"> | </span>'):'<span>-</span>';
   var rem=getStaffData('remedial',currentMonth,filterRem),prevRem=getStaffData('remedial',getPrevMonth(currentMonth),filterRem);
   setTxt('rem-kl',fmt(rem.kl||0));setEl('rem-kl-mom',momBadge(rem.kl||0,prevRem.kl||0,true));
   setTxt('rem-drg',fmt(rem.drg||0));setEl('rem-drg-mom',momBadge(rem.drg||0,prevRem.drg||0,true));
@@ -1298,12 +1322,12 @@ function renderRemedial(){
   var labels=months.map(function(m){return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4);});
   makeLine('chartRemNPL',labels,[{label:'KL',data:months.map(function(m){return getStaffData('remedial',m,filterRem).kl||0;}),borderColor:'#F57F17'},{label:'DRG',data:months.map(function(m){return getStaffData('remedial',m,filterRem).drg||0;}),borderColor:'#E65100'},{label:'Macet',data:months.map(function(m){return getStaffData('remedial',m,filterRem).macet||0;}),borderColor:'#C62828'}]);
   var lits=cur.litigasi||[];
-  var litRows=lits.map(function(l,i){return '<tr><td>'+(i+1)+'</td><td>'+(l.nama||'-')+'</td><td>'+(l.norek||'-')+'</td><td>'+fmtRp(l.plafon||0)+'</td><td>'+fmtRp(l.os||0)+'</td><td>'+(l.kol||'-')+'</td><td>'+(l.status||'-')+'</td><td><button onclick="deleteLitigasi('+i+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:13px">Hapus</button></td></tr>';});
+  var litRows=lits.map(function(l,i){return '<tr><td>'+(i+1)+'</td><td>'+escHtml(l.nama||'-')+'</td><td>'+escHtml(l.norek||'-')+'</td><td>'+fmtRp(l.plafon||0)+'</td><td>'+fmtRp(l.os||0)+'</td><td>'+escHtml(l.kol||'-')+'</td><td>'+escHtml(l.status||'-')+'</td><td><button onclick="deleteLitigasi('+i+')" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:13px">Hapus</button></td></tr>';});
   setEl('tbodyLitigasi',litRows.length?litRows.join(''):'<tr><td colspan="8" style="text-align:center;color:#aaa">Belum ada data litigasi</td></tr>');
   var rows=months.slice().reverse().map(function(m){var d=getStaffData('remedial',m,filterRem);var meta=getMonthData(m).remedial||{};var staff=(meta.staff||[]).filter(Boolean);var npl=(d.kl||0)+(d.drg||0)+(d.macet||0);var litCount=(getMonthData(m).litigasi||[]).length;return '<tr><td>'+formatMonthLabel(m)+'</td><td>'+fmt(d.kl||0)+'</td><td>'+fmt(d.drg||0)+'</td><td>'+fmt(d.macet||0)+'</td><td><b>'+fmt(npl)+'</b></td><td>'+litCount+'</td><td>'+(filterRem!=='all'?filterRem:(staff.join(', ')||'-'))+'</td></tr>';});
   setEl('tbodyRem',rows.join(''));
   var pnys=(cur.penyelesaian||[]);
-  var pnysRows=pnys.map(function(p){return '<div style="display:grid;grid-template-columns:1.2fr 0.6fr 1.4fr;gap:8px;align-items:center;padding:10px 8px;border-bottom:1px solid #fce4ec"><div style="font-size:13px;font-weight:600">'+p.namaDebitur+'</div><div style="font-size:12px;color:#C62828;font-weight:700;text-align:center">'+p.kualitasKredit+'</div><div style="font-size:12px;color:#555">'+p.penyelesaian+'</div></div>';});
+  var pnysRows=pnys.map(function(p){return '<div style="display:grid;grid-template-columns:1.2fr 0.6fr 1.4fr;gap:8px;align-items:center;padding:10px 8px;border-bottom:1px solid #fce4ec"><div style="font-size:13px;font-weight:600">'+escHtml(p.namaDebitur)+'</div><div style="font-size:12px;color:#C62828;font-weight:700;text-align:center">'+escHtml(p.kualitasKredit)+'</div><div style="font-size:12px;color:#555">'+escHtml(p.penyelesaian)+'</div></div>';});
   setEl('tbodyPenyelesaian',pnysRows.length?'<div style="display:grid;grid-template-columns:1.2fr 0.6fr 1.4fr;gap:8px;padding:6px 8px;background:#FCE4EC;border-radius:6px;margin-bottom:4px"><div style="font-size:11px;font-weight:700;color:#C62828">NAMA DEBITUR</div><div style="font-size:11px;font-weight:700;color:#C62828;text-align:center">KUALITAS</div><div style="font-size:11px;font-weight:700;color:#C62828">PENYELESAIAN</div></div>'+pnysRows.join(''):'<div style="color:#aaa;font-size:12px;text-align:center;padding:8px">Belum ada data</div>');
   var npl=(rem.kl||0)+(rem.drg||0)+(rem.macet||0);
   if(npl){var pnpl=(prevRem.kl||0)+(prevRem.drg||0)+(prevRem.macet||0);var diff=npl-pnpl;setEl('analysisRem','NPL: <b style="color:#C62828">'+fmt(npl)+' debitur</b> (KL:'+rem.kl+', DRG:'+rem.drg+', Macet:'+rem.macet+'). '+(diff>0?'<span style="color:#C62828">Naik':'<span style="color:#2E7D32">Turun')+' '+Math.abs(diff)+' dbt vs bulan lalu.</span>');}
@@ -1411,7 +1435,7 @@ function genAnalisis(op,mkCum,aoCum,remCum,pnys,prevOp,prevMkCum,prevAoCum,prevR
   if(tnpl>0){
     h+='Total NPL: <b>'+fmt(tnpl)+'</b> debitur (KL: '+fmt(curKL)+', DRG: '+fmt(curDRG)+', Macet: '+fmt(curMC)+').';
     if(pnpl){var dNPL=tnpl-pnpl;h+=' <b style="color:'+(dNPL<=0?'#2E7D32':'#C62828')+'">'+(dNPL>0?'Naik':'Turun')+' '+Math.abs(dNPL)+'</b> vs bulan lalu ('+fmt(pnpl)+').';}
-    if(pnys&&pnys.length){h+=' Penyelesaian: '+pnys.map(function(p){return p.namaDebitur+' - '+p.penyelesaian;}).join('; ');}
+    if(pnys&&pnys.length){h+=' Penyelesaian: '+pnys.map(function(p){return escHtml(p.namaDebitur)+' - '+escHtml(p.penyelesaian);}).join('; ');}
   }else{h+='Tidak ada kredit bermasalah atau data belum diinput.';}
   h+='</div>';
   return h;
@@ -1659,9 +1683,7 @@ function rngGetNote(key){
   var t=document.getElementById('rngNote-'+key);
   return t?t.value.trim():'';
 }
-function rngEsc(x){
-  return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function rngEsc(x){ return escHtml(x); }
 // Tiap baris tak kosong jadi satu poin bernomor
 function rngNoteHtml(txt,color){
   var lines=String(txt||'').split(/\r?\n/)
@@ -1671,7 +1693,7 @@ function rngNoteHtml(txt,color){
   return '<div style="margin-top:10px">'+
     '<div style="font-size:12px;font-weight:700;margin-bottom:6px">Analisa / Catatan</div>'+
     lines.map(function(t,i){
-      return '<div style="padding:7px 11px;border-left:3px solid '+color+';background:#FAFAFA;margin-bottom:6px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+rngEsc(t)+'</div>';
+      return '<div style="padding:7px 11px;border-left:3px solid '+color+';background:#FAFAFA;margin-bottom:6px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+escHtml(t)+'</div>';
     }).join('')+'</div>';
 }
 function refreshRangeStaffOptions(){
@@ -1682,7 +1704,7 @@ function refreshRangeStaffOptions(){
     var keep=sel.value;
     var names=months.length?rngStaffNames(s.staffSec,months):[];
     sel.innerHTML='<option value="all">Semua petugas (kumulatif)</option>'+
-      names.map(function(n){ return '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>'; }).join('');
+      names.map(function(n){ return '<option value="'+escHtml(n)+'">'+escHtml(n)+'</option>'; }).join('');
     sel.value=(keep&&(keep==='all'||names.indexOf(keep)>=0))?keep:'all';
   });
 }
@@ -1844,9 +1866,9 @@ function rngTableLitigasi(months,TD,TH){
   var rows='';
   months.forEach(function(m){
     (getMonthData(m).litigasi||[]).forEach(function(x){
-      rows+='<tr><td style="'+TD+'">'+rngLabel(m)+'</td><td style="'+TD+'">'+(x.nama||'-')+'</td><td style="'+TD+'">'+(x.norek||'–')+'</td>'+
+      rows+='<tr><td style="'+TD+'">'+rngLabel(m)+'</td><td style="'+TD+'">'+escHtml(x.nama||'-')+'</td><td style="'+TD+'">'+escHtml(x.norek||'–')+'</td>'+
         '<td style="'+TD+';text-align:right">'+fmtRp(x.plafon||0)+'</td><td style="'+TD+';text-align:right">'+fmtRp(x.os||0)+'</td>'+
-        '<td style="'+TD+';text-align:center">'+(x.kol||'-')+'</td><td style="'+TD+'">'+(x.status||'-')+'</td></tr>';
+        '<td style="'+TD+';text-align:center">'+escHtml(x.kol||'-')+'</td><td style="'+TD+'">'+escHtml(x.status||'-')+'</td></tr>';
     });
   });
   if(!rows) return '';
@@ -2025,7 +2047,7 @@ function buildRangeReportHtml(months,sel){
     var staffKey=s.staffSec;
     var staffLbl={op:'Petugas',mkt:'Petugas Funding',ao:'Petugas AO',rem:'Petugas Remedial'}[s.key];
     var sf=(sel.staff||{})[s.key]||'all';
-    var staffTxt=(s.perStaff&&sf!=='all')?sf+' <span style="font-weight:400;font-size:11px;color:#555">(hanya petugas ini)</span>':(rngStaffNames(staffKey,months).join(', ')||'–');
+    var staffTxt=(s.perStaff&&sf!=='all')?escHtml(sf)+' <span style="font-weight:400;font-size:11px;color:#555">(hanya petugas ini)</span>':escHtml(rngStaffNames(staffKey,months).join(', ')||'–');
     var getFn=function(m){ return s.get(m,sf); };
     var extra='';
     if(s.key==='mkt'&&sel.fld.mktProduk) extra+='<div style="font-size:12px;font-weight:700;margin:12px 0 6px">Rekapitulasi per Produk (akumulasi periode)</div>'+rngTableProduk(months,TD,TH,sf);
@@ -2053,7 +2075,7 @@ function buildRangeReportHtml(months,sel){
 
   var rincian=picked.map(function(s){
     var sf2=(sel.staff||{})[s.key]||'all';
-    var who=(s.perStaff&&sf2!=='all')?' — petugas: '+sf2:'';
+    var who=(s.perStaff&&sf2!=='all')?' — petugas: '+escHtml(sf2):'';
     return s.label+who+' ('+s.fields.filter(function(x){return sel.fld[x.id];}).map(function(x){return x.label;}).join(', ')+')';
   }).join(' · ');
 
@@ -2574,7 +2596,7 @@ function renderLaporan(){
       ${document.getElementById('pdfOp')?.checked?`
       <div style="margin-bottom:22px">
         <div style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">I. OPERASIONAL KAS</div>
-        <div style="margin-bottom:8px;font-size:12px">Petugas Operasional: <b>${op.staff||'–'}</b> &nbsp;|&nbsp; Hari Kerja: <b>${op.hariKerja||'-'} hari</b></div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas Operasional: <b>${escHtml(op.staff||'–')}</b> &nbsp;|&nbsp; Hari Kerja: <b>${op.hariKerja||'-'} hari</b></div>
         <table style="width:100%;border-collapse:collapse">
           <tr style="background:#E3F2FD"><td style="${TH};width:45%">Keterangan</td><td style="${TH};text-align:center;width:20%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:20%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:15%">Selisih</td></tr>
           <tr><td style="${TD}">Total Nasabah</td><td style="${TD};text-align:center">${fmt(prevOp.totalNasabah||0)}</td><td style="${TD};text-align:center">${fmt(op.totalNasabah||0)}</td><td style="${TD};text-align:center">${momLabel(op.totalNasabah||0,prevOp.totalNasabah||0)}</td></tr>
@@ -2591,7 +2613,7 @@ function renderLaporan(){
       ${document.getElementById('pdfMkt')?.checked?`
       <div style="margin-bottom:22px">
         <div style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">II. MARKETING / FUNDING</div>
-        <div style="margin-bottom:8px;font-size:12px">Petugas Funding: <b>${(mk.staff||[]).filter(Boolean).join(', ')||'–'}</b></div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas Funding: <b>${escHtml((mk.staff||[]).filter(Boolean).join(', ')||'–')}</b></div>
         <table style="width:100%;border-collapse:collapse">
           <tr style="background:#E3F2FD"><td style="${TH}">Produk</td><td style="${TH};text-align:center">Target</td><td style="${TH};text-align:center">Realisasi Bln Lalu</td><td style="${TH};text-align:center">Realisasi Bln Ini</td><td style="${TH};text-align:center">Nominal (Rp)</td><td style="${TH};text-align:center">%</td><td style="${TH};text-align:center">MoM</td></tr>
           ${PRODUK.map(p=>{const pd=mkCum.produk?.[p]||{};const ppd=(prevMkCum.produk||{})[p]||{};const pct=pd.target>0?Math.round(pd.realisasi/pd.target*100):0;const col=pct>=100?'#2E7D32':pct>=70?'#F57F17':'#C62828';return `<tr><td style="${TD}">${p}</td><td style="${TD};text-align:center">${fmt(pd.target||0)}</td><td style="${TD};text-align:center">${fmt(ppd.realisasi||0)}</td><td style="${TD};text-align:center">${fmt(pd.realisasi||0)}</td><td style="${TD};text-align:right">${fmtRp(pd.nominal||0)}</td><td style="${TD};text-align:center;font-weight:700;color:${col}">${pct}%</td><td style="${TD};text-align:center">${momLabel(pd.realisasi||0,ppd.realisasi||0)}</td></tr>`;}).join('')}
@@ -2610,7 +2632,7 @@ function renderLaporan(){
       ${document.getElementById('pdfAO')?.checked?`
       <div style="margin-bottom:22px">
         <div style="font-size:14px;font-weight:700;background:#7B1FA2;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">III. AO LENDING</div>
-        <div style="margin-bottom:8px;font-size:12px">Petugas AO Lending: <b>${(aoMeta.staff||[]).filter(Boolean).join(', ')||'–'}</b></div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas AO Lending: <b>${escHtml((aoMeta.staff||[]).filter(Boolean).join(', ')||'–')}</b></div>
         <table style="width:100%;border-collapse:collapse">
           <tr style="background:#F3E5F5"><td style="${TH};width:40%">Keterangan</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:16%">Selisih</td></tr>
           <tr><td style="${TD}">Pencairan Kredit</td><td style="${TD};text-align:center">${fmtRp(prevAoCum.pencairan||0)}</td><td style="${TD};text-align:center">${fmtRp(aoCum.pencairan||0)}</td><td style="${TD};text-align:center">${momLabel(aoCum.pencairan||0,prevAoCum.pencairan||0,'rp')}</td></tr>
@@ -2642,7 +2664,7 @@ function renderLaporan(){
       ${document.getElementById('pdfRem')?.checked?`
       <div style="margin-bottom:22px">
         <div style="font-size:14px;font-weight:700;background:#C62828;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">IV. REMEDIAL</div>
-        <div style="margin-bottom:8px;font-size:12px">Petugas AO Remedial: <b>${(remMeta.staff||[]).filter(Boolean).join(', ')||'–'}</b></div>
+        <div style="margin-bottom:8px;font-size:12px">Petugas AO Remedial: <b>${escHtml((remMeta.staff||[]).filter(Boolean).join(', ')||'–')}</b></div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
           <tr style="background:#FFEBEE"><td style="${TH};width:40%">Kolektabilitas</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:16%">Selisih</td></tr>
           <tr><td style="${TD}">Kurang Lancar (KL)</td><td style="${TD};text-align:center">${fmt(prevRemCum.kl||0)}</td><td style="${TD};text-align:center">${fmt(remCum.kl||0)}</td><td style="${TD};text-align:center">${momLabel(remCum.kl||0,prevRemCum.kl||0,'',true)}</td></tr>
@@ -2653,12 +2675,12 @@ function renderLaporan(){
         ${pnys.length?`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#C62828">Penyelesaian Kredit Bermasalah:</div>
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <tr style="background:#FCE4EC"><th style="${TH}">Nama Debitur</th><th style="${TH};text-align:center">Kualitas</th><th style="${TH}">Penyelesaian</th></tr>
-          ${pnys.map(p=>`<tr><td style="${TD}">${p.namaDebitur}</td><td style="${TD};text-align:center;font-weight:700;color:#C62828">${p.kualitasKredit}</td><td style="${TD}">${p.penyelesaian}</td></tr>`).join('')}
+          ${pnys.map(p=>`<tr><td style="${TD}">${escHtml(p.namaDebitur)}</td><td style="${TD};text-align:center;font-weight:700;color:#C62828">${escHtml(p.kualitasKredit)}</td><td style="${TD}">${escHtml(p.penyelesaian)}</td></tr>`).join('')}
         </table></div>`:''}
         ${lits.length?`<div style="font-size:12px;font-weight:700;margin-bottom:6px">Debitur Litigasi (${lits.length}):</div>
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <tr style="background:#FFEBEE"><th style="${TH}">No</th><th style="${TH}">Nama</th><th style="${TH}">No. Rek</th><th style="${TH}">Plafon</th><th style="${TH}">Outstanding</th><th style="${TH}">Kol.</th><th style="${TH}">Status</th></tr>
-          ${lits.map((l,i)=>`<tr><td style="${TD}">${i+1}</td><td style="${TD}">${l.nama}</td><td style="${TD}">${l.norek||'–'}</td><td style="${TD}">${fmtRp(l.plafon)}</td><td style="${TD}">${fmtRp(l.os)}</td><td style="${TD}">${l.kol}</td><td style="${TD}">${l.status}</td></tr>`).join('')}
+          ${lits.map((l,i)=>`<tr><td style="${TD}">${i+1}</td><td style="${TD}">${escHtml(l.nama)}</td><td style="${TD}">${escHtml(l.norek||'–')}</td><td style="${TD}">${fmtRp(l.plafon)}</td><td style="${TD}">${fmtRp(l.os)}</td><td style="${TD}">${escHtml(l.kol)}</td><td style="${TD}">${escHtml(l.status)}</td></tr>`).join('')}
         </table>`:''}
       </div>`:''}
 
