@@ -898,6 +898,7 @@ function init(){
     syncOpenForm();
   },function(e){console.error('Firestore listen error:',e);});
   initCatatanSync();
+  initRangeNoteSync();
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');navigator.serviceWorker.addEventListener('controllerchange',function(){window.location.reload();});}
 }
 
@@ -1613,9 +1614,46 @@ function buildRangeFieldUI(){
   rngPaintAll();
   refreshRangeStaffOptions();
 }
+var _rngNoteTimer=null;
 function rngSaveNote(key){
   var t=document.getElementById('rngNote-'+key); if(!t) return;
   try{ localStorage.setItem('sgm_rngnote_'+key,t.value); }catch(e){}
+  // Tunda kiriman ke server supaya tidak menulis tiap ketukan tombol
+  if(_rngNoteTimer) clearTimeout(_rngNoteTimer);
+  _rngNoteTimer=setTimeout(pushRangeNotes,900);
+}
+function collectRangeNotes(){
+  var o={};
+  RNG_SEC.forEach(function(s){
+    var t=document.getElementById('rngNote-'+s.key);
+    var v=t?t.value:'';
+    if(!t){ try{ v=localStorage.getItem('sgm_rngnote_'+s.key)||''; }catch(e){ v=''; } }
+    o[s.key]=v;
+  });
+  return o;
+}
+function pushRangeNotes(){
+  _rngNoteTimer=null;
+  fsDB.collection('sgm_rngnote').doc('catatan').set(collectRangeNotes())
+    .catch(function(e){ console.error('Catatan bagian sync error:',e); });
+}
+function initRangeNoteSync(){
+  fsDB.collection('sgm_rngnote').doc('catatan').onSnapshot(function(doc){
+    var data=doc.exists?(doc.data()||{}):null;
+    if(!data){
+      // Belum ada di server: bawa naik catatan yang sudah ada di perangkat ini
+      var lokal=collectRangeNotes();
+      if(Object.keys(lokal).some(function(k){ return (lokal[k]||'').trim(); })) pushRangeNotes();
+      return;
+    }
+    RNG_SEC.forEach(function(s){
+      var v=typeof data[s.key]==='string'?data[s.key]:'';
+      try{ localStorage.setItem('sgm_rngnote_'+s.key,v); }catch(e){}
+      var t=document.getElementById('rngNote-'+s.key);
+      // Jangan menimpa kolom yang sedang diketik pengguna
+      if(t && document.activeElement!==t && t.value!==v) t.value=v;
+    });
+  },function(e){ console.error('Catatan bagian listen error:',e); });
 }
 function rngGetNote(key){
   var t=document.getElementById('rngNote-'+key);
