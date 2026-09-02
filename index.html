@@ -543,6 +543,7 @@ tr:hover td{background:#FFF8F8}
       <label style="font-size:12px;color:#5D4037;font-weight:700;margin-bottom:0;text-transform:uppercase;white-space:nowrap">Periode Bulan</label>
       <select id="modalMonth" onchange="onModalMonthChange()" style="width:auto;padding:7px 12px;font-weight:600;border-color:#C62828;color:#C62828;border-radius:8px;flex:1"></select>
     </div>
+    <div id="formNotice" style="display:none;margin-bottom:14px;background:#FFF3E0;border:1.5px solid #FFCC80;border-radius:10px;padding:10px 14px;font-size:12px;color:#E65100;line-height:1.6"></div>
     <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
       <button class="tab-btn active" id="tab-op" onclick="switchTab('tab-op')">Operasional</button>
       <button class="tab-btn" id="tab-mkt" onclick="switchTab('tab-mkt')">Marketing</button>
@@ -894,6 +895,7 @@ function init(){
     snap.forEach(function(doc){db[doc.id]=doc.data();});
     localStorage.setItem('sgm_bpr',JSON.stringify(db));
     renderAll();
+    syncOpenForm();
   },function(e){console.error('Firestore listen error:',e);});
   initCatatanSync();
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');navigator.serviceWorker.addEventListener('controllerchange',function(){window.location.reload();});}
@@ -927,7 +929,16 @@ function buildModalMonthSelect(){
   }
 }
 function getModalMonth(){ var sel=document.getElementById('modalMonth'); return sel?sel.value:currentMonth; }
-function onModalMonthChange(){ loadFormData(); }
+function onModalMonthChange(){
+  var m=getModalMonth();
+  if(m&&m!==currentMonth){
+    currentMonth=m;
+    var g=document.getElementById('globalMonth'); if(g) g.value=m;
+    filterMkt='all'; filterAO='all'; filterRem='all'; _aiDone=false;
+    renderAll();
+  }
+  loadFormData();
+}
 
 
 function onMonthChange(){ currentMonth=document.getElementById('globalMonth').value; filterMkt='all';filterAO='all';filterRem='all'; _aiDone=false; renderAll(); }
@@ -959,7 +970,17 @@ function goTo(page){
 }
 
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
-function openModal(id){ document.getElementById(id).classList.add('open'); if(id==='inputModal'){buildModalMonthSelect();loadFormData();} }
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='inputModal'){
+    buildModalMonthSelect(); loadFormData();
+    var mo=document.getElementById('inputModal');
+    if(!mo.dataset.dirtyBound){
+      mo.addEventListener('input',function(e){ if(e.target&&e.target.id!=='modalMonth') markFormDirty(); });
+      mo.dataset.dirtyBound='1';
+    }
+  }
+}
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 function switchTab(tab){
@@ -970,6 +991,23 @@ function switchTab(tab){
   if(map[tab]) document.getElementById(map[tab]).style.display='block';
 }
 
+var _formDirty=false,_formMonthLoaded='',_formStamp=0;
+function formStampOf(m){ return hashCode(JSON.stringify(db[m]||{})); }
+function markFormDirty(){ _formDirty=true; }
+function showFormNotice(html){
+  var el=document.getElementById('formNotice'); if(!el) return;
+  el.innerHTML=html||''; el.style.display=html?'block':'none';
+}
+function reloadFormFromServer(){ loadFormData(); }
+function syncOpenForm(){
+  var modal=document.getElementById('inputModal');
+  if(!modal||!modal.classList.contains('open')) return;
+  var m=getModalMonth(); if(!m) return;
+  if(m===_formMonthLoaded && formStampOf(m)===_formStamp) return;
+  if(!_formDirty){ loadFormData(); return; }
+  showFormNotice('Data bulan <b>'+formatMonthLabel(m)+'</b> baru saja diperbarui dari perangkat atau sesi lain. Jika Anda menekan Simpan sekarang, data tersebut akan tertimpa. '+
+    '<button type="button" onclick="reloadFormFromServer()" style="margin-left:6px;border:1px solid #E65100;background:#fff;color:#E65100;border-radius:7px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">Muat ulang form</button>');
+}
 function loadFormData(){
   const d=getMonthData(getModalMonth());
   const op=d.operasional||{}, mk=d.marketing||{}, ao=d.lending||{}, rem=d.remedial||{};
@@ -1034,6 +1072,8 @@ function loadFormData(){
   });
   renderPenyelesaianList();
   switchFormSubTab('mkt',0); switchFormSubTab('ao',0); switchFormSubTab('rem',0);
+  _formDirty=false; _formMonthLoaded=getModalMonth(); _formStamp=formStampOf(_formMonthLoaded);
+  showFormNotice('');
 }
 function saveData(){
   var mm=getModalMonth(); if(!db[mm]) db[mm]={litigasi:[]};
