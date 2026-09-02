@@ -253,13 +253,14 @@ tr:hover td{background:#FFF8F8}
           </div>
         </div>
 
-        <label style="font-size:11px;color:#555;font-weight:600;margin-bottom:7px;display:block;text-transform:uppercase;letter-spacing:.04em">Data yang dicetak</label>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px">
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer;font-size:13px"><input type="checkbox" id="rngOp" checked style="width:auto;accent-color:#1565C0"> Operasional Kas</label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer;font-size:13px"><input type="checkbox" id="rngMkt" checked style="width:auto;accent-color:#1565C0"> Marketing / Funding</label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer;font-size:13px"><input type="checkbox" id="rngAO" checked style="width:auto;accent-color:#1565C0"> AO Lending</label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer;font-size:13px"><input type="checkbox" id="rngRem" checked style="width:auto;accent-color:#1565C0"> Remedial</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;flex-wrap:wrap;gap:6px">
+          <label style="font-size:11px;color:#555;font-weight:600;display:block;text-transform:uppercase;letter-spacing:.04em;margin-bottom:0">Data yang dicetak — centang bagian, lalu pilih rinciannya</label>
+          <div style="display:flex;gap:6px">
+            <button type="button" onclick="rngCheckAll(true)" style="border:1px solid #ddd;background:#fff;color:#555;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer">Pilih semua</button>
+            <button type="button" onclick="rngCheckAll(false)" style="border:1px solid #ddd;background:#fff;color:#555;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer">Kosongkan</button>
+          </div>
         </div>
+        <div id="rngFieldWrap" style="margin-bottom:12px"></div>
 
         <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F1F8E9;border-radius:9px;border:1.5px solid #DCEDC8;cursor:pointer;font-size:13px;margin-bottom:14px"><input type="checkbox" id="rngAI" checked style="width:auto;accent-color:#2E7D32"> Sertakan analisa AI sesuai data yang diminta</label>
 
@@ -885,6 +886,7 @@ function getLast6Months(){
 
 function init(){
   buildMonthSelect();
+  buildRangeFieldUI();
   buildRangeMonthSelects();
   db=JSON.parse(localStorage.getItem('sgm_bpr')||'{}');
   renderAll();
@@ -1449,15 +1451,157 @@ function pdfChartHtml(imgs){
 
 
 // ================= LAPORAN RENTANG BULAN (DASHBOARD) =================
-var RNG_SEC=[
-  {key:'op', id:'rngOp',  label:'Operasional Kas',    color:'#1565C0'},
-  {key:'mkt',id:'rngMkt', label:'Marketing / Funding',color:'#3949AB'},
-  {key:'ao', id:'rngAO',  label:'AO Lending',         color:'#7B1FA2'},
-  {key:'rem',id:'rngRem', label:'Remedial',           color:'#C62828'}
-];
 var RNG_ROMAN=['I','II','III','IV','V','VI','VII','VIII'];
-
+function rngF1(n){ return (Number(n)||0).toFixed(1); }
+function rngFpct(n){ return (Number(n)||0)+'%'; }
+function rngColPct(v){ return v>=100?'#2E7D32':v>=70?'#F57F17':'#C62828'; }
+function rngSum(ds,fn){ return ds.reduce(function(s,d){ return s+(fn(d)||0); },0); }
+function rngPct(r,t){ return t>0?Math.round(r/t*100):0; }
+function rngAvgArr(a){ return a.length?a.reduce(function(s,v){return s+v;},0)/a.length:0; }
 function shiftMonth(m,delta){ var p=m.split('-'); return toYM(new Date(+p[0],+p[1]-1+delta,1)); }
+function rngLabel(m){ return formatMonthLabel(m); }
+
+function rngMktTotals(m){
+  var d=getStaffData('marketing',m,'all'), pr=d.produk||{};
+  var t=0,r=0,n=0;
+  PRODUK.forEach(function(p){ var x=pr[p]||{}; t+=x.target||0; r+=x.realisasi||0; n+=x.nominal||0; });
+  return {slip:d.slip||0,target:t,realisasi:r,nominal:n,noaTab:d.noaTab||0,pglTab:d.pglTab||0,
+          noaDep:d.noaDep||0,pglDep:d.pglDep||0,cairTab:d.cairTab||0,cairTabNom:d.cairTabNom||0,
+          cairDep:d.cairDep||0,cairDepNom:d.cairDepNom||0};
+}
+function rngGetOp(m){ return getMonthData(m).operasional||{}; }
+function rngGetAO(m){ return getStaffData('lending',m,'all'); }
+function rngGetRem(m){ var d=getStaffData('remedial',m,'all'); return {kl:d.kl||0,drg:d.drg||0,macet:d.macet||0,lit:(getMonthData(m).litigasi||[]).length}; }
+
+// Definisi bagian + rincian data yang bisa dipilih per bagian
+var RNG_SEC=[
+  {key:'op',id:'rngOp',label:'Operasional Kas',color:'#1565C0',bg:'#E3F2FD',get:rngGetOp,fields:[
+    {id:'opHari',label:'Hari Kerja',cols:[{h:'Hari Kerja',a:'center',v:function(d){return d.hariKerja||0;},f:fmt,tot:'sum'}]},
+    {id:'opNasabah',label:'Nasabah (total & rata-rata/hari)',cols:[
+      {h:'Total Nasabah',a:'center',v:function(d){return d.totalNasabah||0;},f:fmt,tot:'sum'},
+      {h:'Avg Nasabah/Hari',a:'center',v:function(d){return d.nasabah||0;},f:rngF1,tot:'avg'}]},
+    {id:'opSlip',label:'Slip (total & rata-rata/hari)',cols:[
+      {h:'Total Slip',a:'center',v:function(d){return d.totalSlip||0;},f:fmt,tot:'sum'},
+      {h:'Avg Slip/Hari',a:'center',v:function(d){return d.slip||0;},f:rngF1,tot:'avg'}]},
+    {id:'opTab',label:'Tabungan (NOA & nominal)',cols:[
+      {h:'NOA Tab',a:'center',v:function(d){return d.noaTabungan||0;},f:fmt,tot:'sum'},
+      {h:'Nominal Tab',a:'right',v:function(d){return d.nominalTabungan||0;},f:fmtRp,tot:'sum'}]},
+    {id:'opDep',label:'Deposito (NOA & nominal)',cols:[
+      {h:'NOA Dep',a:'center',v:function(d){return d.noaDeposito||0;},f:fmt,tot:'sum'},
+      {h:'Nominal Dep',a:'right',v:function(d){return d.nominalDeposito||0;},f:fmtRp,tot:'sum'}]},
+    {id:'opChart',label:'Grafik tren',extra:true}
+  ]},
+  {key:'mkt',id:'rngMkt',label:'Marketing / Funding',color:'#3949AB',bg:'#E3F2FD',get:rngMktTotals,fields:[
+    {id:'mktSlip',label:'Slip rata-rata per hari',cols:[{h:'Slip/Hari',a:'center',v:function(d){return d.slip;},f:rngF1,tot:'avg'}]},
+    {id:'mktTarget',label:'Target & realisasi funding',cols:[
+      {h:'Target',a:'center',v:function(d){return d.target;},f:fmt,tot:'sum'},
+      {h:'Realisasi',a:'center',v:function(d){return d.realisasi;},f:fmt,tot:'sum'},
+      {h:'%',a:'center',v:function(d){return rngPct(d.realisasi,d.target);},f:rngFpct,c:rngColPct,
+       tot:function(ds){ return rngPct(rngSum(ds,function(d){return d.realisasi;}),rngSum(ds,function(d){return d.target;})); }}]},
+    {id:'mktNominal',label:'Nominal funding terhimpun',cols:[{h:'Nominal',a:'right',v:function(d){return d.nominal;},f:fmtRp,tot:'sum'}]},
+    {id:'mktRek',label:'Pengelolaan rekening (NOA & pengelolaan)',cols:[
+      {h:'NOA Tab',a:'center',v:function(d){return d.noaTab;},f:fmt,tot:'sum'},
+      {h:'Pgl Tab',a:'center',v:function(d){return d.pglTab;},f:fmt,tot:'sum'},
+      {h:'NOA Dep',a:'center',v:function(d){return d.noaDep;},f:fmt,tot:'sum'},
+      {h:'Pgl Dep',a:'center',v:function(d){return d.pglDep;},f:fmt,tot:'sum'}]},
+    {id:'mktCair',label:'Pencairan tabungan & deposito',cols:[
+      {h:'Cair Tab',a:'center',v:function(d){return d.cairTab;},f:fmt,tot:'sum'},
+      {h:'Nom Cair Tab',a:'right',v:function(d){return d.cairTabNom;},f:fmtRp,tot:'sum'},
+      {h:'Cair Dep',a:'center',v:function(d){return d.cairDep;},f:fmt,tot:'sum'},
+      {h:'Nom Cair Dep',a:'right',v:function(d){return d.cairDepNom;},f:fmtRp,tot:'sum'}]},
+    {id:'mktProduk',label:'Rekapitulasi per produk',extra:true},
+    {id:'mktChart',label:'Grafik tren',extra:true}
+  ]},
+  {key:'ao',id:'rngAO',label:'AO Lending',color:'#7B1FA2',bg:'#F3E5F5',get:rngGetAO,fields:[
+    {id:'aoKredit',label:'NOA & pencairan kredit (realisasi)',cols:[
+      {h:'NOA Kredit',a:'center',v:function(d){return d.noaKreditRealisasi||0;},f:fmt,tot:'sum'},
+      {h:'Pencairan Kredit',a:'right',v:function(d){return d.pencairanKreditRealisasi||0;},f:fmtRp,tot:'sum'}]},
+    {id:'aoPencairan',label:'Pencairan',cols:[{h:'Pencairan',a:'right',v:function(d){return d.pencairan||0;},f:fmtRp,tot:'sum'}]},
+    {id:'aoNoa',label:'NOA baru & pelunasan',cols:[
+      {h:'NOA Baru',a:'center',v:function(d){return d.noa||0;},f:fmt,tot:'sum'},
+      {h:'Pelunasan',a:'center',v:function(d){return d.pelunasan||0;},f:fmt,tot:'sum'}]},
+    {id:'aoAngsuran',label:'Angsuran masuk',cols:[{h:'Angsuran',a:'right',v:function(d){return d.angsuran||0;},f:fmtRp,tot:'sum'}]},
+    {id:'aoKol',label:'Kolektabilitas (Lancar & DPK)',cols:[
+      {h:'Lancar',a:'center',v:function(d){return d.lancar||0;},f:fmt,tot:'last'},
+      {h:'DPK',a:'center',v:function(d){return d.dpk||0;},f:fmt,tot:'last'}]},
+    {id:'aoAsset',label:'Asset',cols:[{h:'Asset',a:'right',v:function(d){return d.asset||0;},f:fmtRp,tot:'last'}]},
+    {id:'aoChart',label:'Grafik tren',extra:true}
+  ]},
+  {key:'rem',id:'rngRem',label:'Remedial',color:'#C62828',bg:'#FFEBEE',get:rngGetRem,fields:[
+    {id:'remKol',label:'Kolektabilitas (KL, Diragukan, Macet)',cols:[
+      {h:'KL',a:'center',v:function(d){return d.kl;},f:fmt,tot:'last'},
+      {h:'Diragukan',a:'center',v:function(d){return d.drg;},f:fmt,tot:'last'},
+      {h:'Macet',a:'center',v:function(d){return d.macet;},f:fmt,tot:'last'}]},
+    {id:'remNpl',label:'Total NPL',cols:[{h:'Total NPL',a:'center',v:function(d){return d.kl+d.drg+d.macet;},f:fmt,tot:'last',b:true}]},
+    {id:'remLit',label:'Jumlah kasus litigasi',cols:[{h:'Litigasi',a:'center',v:function(d){return d.lit;},f:fmt,tot:'sum'}]},
+    {id:'remLitList',label:'Daftar debitur litigasi',extra:true},
+    {id:'remChart',label:'Grafik tren',extra:true}
+  ]}
+];
+function rngSecByKey(k){ for(var i=0;i<RNG_SEC.length;i++) if(RNG_SEC[i].key===k) return RNG_SEC[i]; return null; }
+
+// ---------- UI PILIHAN BERTINGKAT ----------
+function buildRangeFieldUI(){
+  var wrap=document.getElementById('rngFieldWrap'); if(!wrap) return;
+  wrap.innerHTML=RNG_SEC.map(function(s){
+    return '<div style="border:1.5px solid #eee;border-radius:10px;padding:11px 13px;margin-bottom:9px;background:#FCFCFD">'+
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:'+s.color+';text-transform:none;letter-spacing:0;margin-bottom:0">'+
+        '<input type="checkbox" id="'+s.id+'" checked onchange="rngToggleSection(\''+s.key+'\')" style="width:auto;accent-color:'+s.color+'"> '+s.label+
+      '</label>'+
+      '<div id="rngSub-'+s.key+'" style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px 12px;margin:9px 0 0 24px">'+
+        s.fields.map(function(f){
+          return '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;font-weight:500;color:#555;text-transform:none;letter-spacing:0;margin-bottom:0">'+
+            '<input type="checkbox" id="rngF-'+f.id+'" checked onchange="rngSyncSection(\''+s.key+'\')" style="width:auto;accent-color:'+s.color+'"> '+f.label+'</label>';
+        }).join('')+
+      '</div></div>';
+  }).join('');
+  rngPaintAll();
+}
+function rngToggleSection(key){
+  var s=rngSecByKey(key), on=document.getElementById(s.id).checked;
+  s.fields.forEach(function(f){ var e=document.getElementById('rngF-'+f.id); if(e) e.checked=on; });
+  rngPaintSection(key);
+}
+function rngSyncSection(key){
+  var s=rngSecByKey(key);
+  var any=s.fields.some(function(f){ var e=document.getElementById('rngF-'+f.id); return e&&e.checked; });
+  var sec=document.getElementById(s.id); if(sec) sec.checked=any;
+  rngPaintSection(key);
+}
+function rngPaintSection(key){
+  var s=rngSecByKey(key), sub=document.getElementById('rngSub-'+key);
+  var on=document.getElementById(s.id).checked;
+  if(sub) sub.style.opacity=on?'1':'.45';
+}
+function rngPaintAll(){ RNG_SEC.forEach(function(s){ rngPaintSection(s.key); }); }
+function rngCheckAll(on){
+  RNG_SEC.forEach(function(s){
+    var se=document.getElementById(s.id); if(se) se.checked=on;
+    s.fields.forEach(function(f){ var e=document.getElementById('rngF-'+f.id); if(e) e.checked=on; });
+    rngPaintSection(s.key);
+  });
+  rngMsg('');
+}
+
+function getRangeSelection(){
+  var sec={}, fld={};
+  RNG_SEC.forEach(function(s){
+    var se=document.getElementById(s.id);
+    var picked=s.fields.filter(function(f){ var e=document.getElementById('rngF-'+f.id); return e?e.checked:true; });
+    sec[s.key]=(se?se.checked:true)&&picked.length>0;
+    s.fields.forEach(function(f){
+      var e=document.getElementById('rngF-'+f.id);
+      fld[f.id]=sec[s.key]&&(e?e.checked:true);
+    });
+  });
+  return {sec:sec,fld:fld};
+}
+function rngPickedSections(sel){ return RNG_SEC.filter(function(s){ return sel.sec[s.key]; }); }
+function rngPickedCols(s,sel){
+  var cols=[];
+  s.fields.forEach(function(f){ if(!f.extra&&sel.fld[f.id]) cols=cols.concat(f.cols); });
+  return cols;
+}
 
 function buildRangeMonthSelects(){
   var from=document.getElementById('rngFrom'), to=document.getElementById('rngTo');
@@ -1485,28 +1629,9 @@ function getRangeMonths(){
   return out;
 }
 
-function getRangeSections(){
-  var s={};
-  RNG_SEC.forEach(function(x){ var el=document.getElementById(x.id); s[x.key]=el?el.checked:false; });
-  return s;
-}
-
 function rngMsg(txt,color){
   var el=document.getElementById('rngMsg'); if(!el) return;
   el.innerHTML=txt?'<span style="color:'+(color||'#555')+'">'+txt+'</span>':'';
-}
-
-function rngLabel(m){ return formatMonthLabel(m); }
-function rngPct(r,t){ return t>0?Math.round(r/t*100):0; }
-function rngAvg(a){ return a.length?a.reduce(function(s,v){return s+v;},0)/a.length:0; }
-
-function rngMktTotals(m){
-  var d=getStaffData('marketing',m,'all'), pr=d.produk||{};
-  var t=0,r=0,n=0;
-  PRODUK.forEach(function(p){ var x=pr[p]||{}; t+=x.target||0; r+=x.realisasi||0; n+=x.nominal||0; });
-  return {slip:d.slip||0,target:t,realisasi:r,nominal:n,noaTab:d.noaTab||0,pglTab:d.pglTab||0,
-          noaDep:d.noaDep||0,pglDep:d.pglDep||0,cairTab:d.cairTab||0,cairTabNom:d.cairTabNom||0,
-          cairDep:d.cairDep||0,cairDepNom:d.cairDepNom||0};
 }
 
 function rngProdukRecap(months){
@@ -1532,101 +1657,35 @@ function rngStaffNames(section,months){
   return Object.keys(seen);
 }
 
-// ---------- GRAFIK ----------
-function buildRangeCharts(months,sec){
-  if(typeof Chart==='undefined') return {};
-  var wrap=document.createElement('div');
-  wrap.style.cssText='position:fixed;left:-9999px;top:0;width:700px;height:600px;background:#fff;';
-  document.body.appendChild(wrap);
-  var labels=months.map(function(m){ return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4); });
-  var cfgs=[];
-  if(sec.op) cfgs.push({id:'rngC1',type:'line',label:'Tren Nasabah/Hari',data:{labels:labels,datasets:[{label:'Nasabah/Hari',data:months.map(function(m){return (getMonthData(m).operasional||{}).nasabah||0;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.1)',tension:.4,fill:true}]}});
-  if(sec.mkt) cfgs.push({id:'rngC2',type:'bar',label:'Target vs Realisasi Funding',data:{labels:labels,datasets:[{label:'Target',data:months.map(function(m){return rngMktTotals(m).target;}),backgroundColor:'rgba(21,101,192,.5)'},{label:'Realisasi',data:months.map(function(m){return rngMktTotals(m).realisasi;}),backgroundColor:'rgba(198,40,40,.7)'}]}});
-  if(sec.mkt) cfgs.push({id:'rngC3',type:'line',label:'Nominal Funding Terhimpun (Rp)',data:{labels:labels,datasets:[{label:'Nominal',data:months.map(function(m){return rngMktTotals(m).nominal;}),borderColor:'#2E7D32',backgroundColor:'rgba(46,125,50,.1)',tension:.4,fill:true}]}});
-  if(sec.ao) cfgs.push({id:'rngC4',type:'line',label:'Tren Pencairan AO (Rp)',data:{labels:labels,datasets:[{label:'Pencairan',data:months.map(function(m){return getStaffData('lending',m,'all').pencairan||0;}),borderColor:'#AD1457',backgroundColor:'rgba(173,20,87,.1)',tension:.4,fill:true}]}});
-  if(sec.rem) cfgs.push({id:'rngC5',type:'line',label:'Tren NPL Kolektabilitas',data:{labels:labels,datasets:[
-    {label:'KL',data:months.map(function(m){return getStaffData('remedial',m,'all').kl||0;}),borderColor:'#F57F17',tension:.4},
-    {label:'DRG',data:months.map(function(m){return getStaffData('remedial',m,'all').drg||0;}),borderColor:'#E65100',tension:.4},
-    {label:'Macet',data:months.map(function(m){return getStaffData('remedial',m,'all').macet||0;}),borderColor:'#C62828',tension:.4}]}});
-  var imgs=[];
-  cfgs.forEach(function(c){
-    var box=document.createElement('div'); box.style.cssText='width:340px;height:200px;display:inline-block;';
-    var cv=document.createElement('canvas'); cv.id=c.id; box.appendChild(cv); wrap.appendChild(box);
-    try{
-      var ch=new Chart(cv,{type:c.type,data:c.data,options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
-      imgs.push({src:cv.toDataURL('image/png'),label:c.label});
-      ch.destroy();
-    }catch(e){}
-  });
-  document.body.removeChild(wrap);
-  return imgs;
-}
-
-function rngChartHtml(imgs){
-  if(!imgs||!imgs.length) return '';
-  var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
-  imgs.forEach(function(d){
-    h+='<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#333;margin-bottom:4px">'+d.label+'</div><img src="'+d.src+'" style="width:100%;max-height:200px;object-fit:contain;border:1px solid #eee;border-radius:6px" /></div>';
-  });
-  return h+'</div>';
-}
-
-// ---------- TABEL PER BAGIAN ----------
-function rngTableOp(months,TD,TH){
-  var tot={nasabah:0,slip:0,hari:0,noaTab:0,nomTab:0,noaDep:0,nomDep:0}, avgN=[], avgS=[];
-  var rows=months.map(function(m){
-    var d=getMonthData(m).operasional||{};
-    tot.nasabah+=d.totalNasabah||0; tot.slip+=d.totalSlip||0; tot.hari+=d.hariKerja||0;
-    tot.noaTab+=d.noaTabungan||0; tot.nomTab+=d.nominalTabungan||0;
-    tot.noaDep+=d.noaDeposito||0; tot.nomDep+=d.nominalDeposito||0;
-    if(d.nasabah) avgN.push(d.nasabah); if(d.slip) avgS.push(d.slip);
-    return '<tr><td style="'+TD+'">'+rngLabel(m)+'</td><td style="'+TD+';text-align:center">'+(d.hariKerja||'-')+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.totalNasabah||0)+'</td><td style="'+TD+';text-align:center">'+(d.nasabah?d.nasabah.toFixed(1):'-')+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.totalSlip||0)+'</td><td style="'+TD+';text-align:center">'+(d.slip?d.slip.toFixed(1):'-')+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.noaTabungan||0)+'</td><td style="'+TD+';text-align:right">'+fmtRp(d.nominalTabungan||0)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.noaDeposito||0)+'</td><td style="'+TD+';text-align:right">'+fmtRp(d.nominalDeposito||0)+'</td></tr>';
+// ---------- MESIN TABEL (kolom mengikuti pilihan) ----------
+function rngTable(months,cols,getData,bg,TD,TH){
+  if(!cols.length) return '';
+  var datas=months.map(function(m){ return getData(m); });
+  var head='<tr style="background:'+bg+'"><td style="'+TH+'">Bulan</td>'+
+    cols.map(function(c){ return '<td style="'+TH+';text-align:center">'+c.h+'</td>'; }).join('')+'</tr>';
+  var body=months.map(function(m,i){
+    var d=datas[i];
+    return '<tr><td style="'+TD+'">'+rngLabel(m)+'</td>'+cols.map(function(c){
+      var v=c.v(d,m);
+      var st=TD+';text-align:'+(c.a||'center');
+      if(c.c) st+=';font-weight:700;color:'+c.c(v);
+      else if(c.b) st+=';font-weight:700';
+      return '<td style="'+st+'">'+(c.f?c.f(v):v)+'</td>';
+    }).join('')+'</tr>';
   }).join('');
-  return '<table style="width:100%;border-collapse:collapse">'+
-    '<tr style="background:#E3F2FD"><td style="'+TH+'">Bulan</td><td style="'+TH+';text-align:center">Hari Kerja</td>'+
-    '<td style="'+TH+';text-align:center">Total Nasabah</td><td style="'+TH+';text-align:center">Avg/Hari</td>'+
-    '<td style="'+TH+';text-align:center">Total Slip</td><td style="'+TH+';text-align:center">Avg/Hari</td>'+
-    '<td style="'+TH+';text-align:center">NOA Tab</td><td style="'+TH+';text-align:center">Nominal Tab</td>'+
-    '<td style="'+TH+';text-align:center">NOA Dep</td><td style="'+TH+';text-align:center">Nominal Dep</td></tr>'+rows+
-    '<tr style="background:#FFF8E1"><td style="'+TH+'">TOTAL / RATA-RATA</td><td style="'+TH+';text-align:center">'+fmt(tot.hari)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(tot.nasabah)+'</td><td style="'+TH+';text-align:center">'+rngAvg(avgN).toFixed(1)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(tot.slip)+'</td><td style="'+TH+';text-align:center">'+rngAvg(avgS).toFixed(1)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(tot.noaTab)+'</td><td style="'+TH+';text-align:right">'+fmtRp(tot.nomTab)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(tot.noaDep)+'</td><td style="'+TH+';text-align:right">'+fmtRp(tot.nomDep)+'</td></tr></table>';
-}
-
-function rngTableMkt(months,TD,TH){
-  var t={target:0,realisasi:0,nominal:0,noaTab:0,pglTab:0,noaDep:0,pglDep:0,cairTabNom:0,cairDepNom:0}, avgSlip=[];
-  var rows=months.map(function(m){
-    var d=rngMktTotals(m);
-    t.target+=d.target; t.realisasi+=d.realisasi; t.nominal+=d.nominal;
-    t.noaTab+=d.noaTab; t.pglTab+=d.pglTab; t.noaDep+=d.noaDep; t.pglDep+=d.pglDep;
-    t.cairTabNom+=d.cairTabNom; t.cairDepNom+=d.cairDepNom;
-    if(d.slip) avgSlip.push(d.slip);
-    var pct=rngPct(d.realisasi,d.target);
-    var col=pct>=100?'#2E7D32':pct>=70?'#F57F17':'#C62828';
-    return '<tr><td style="'+TD+'">'+rngLabel(m)+'</td><td style="'+TD+';text-align:center">'+(d.slip?d.slip.toFixed(1):'-')+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.target)+'</td><td style="'+TD+';text-align:center">'+fmt(d.realisasi)+'</td>'+
-      '<td style="'+TD+';text-align:center;font-weight:700;color:'+col+'">'+pct+'%</td>'+
-      '<td style="'+TD+';text-align:right">'+fmtRp(d.nominal)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.noaTab)+'</td><td style="'+TD+';text-align:center">'+fmt(d.noaDep)+'</td>'+
-      '<td style="'+TD+';text-align:right">'+fmtRp(d.cairTabNom)+'</td><td style="'+TD+';text-align:right">'+fmtRp(d.cairDepNom)+'</td></tr>';
-  }).join('');
-  var pctT=rngPct(t.realisasi,t.target);
-  return '<table style="width:100%;border-collapse:collapse">'+
-    '<tr style="background:#E3F2FD"><td style="'+TH+'">Bulan</td><td style="'+TH+';text-align:center">Slip/Hari</td>'+
-    '<td style="'+TH+';text-align:center">Target</td><td style="'+TH+';text-align:center">Realisasi</td><td style="'+TH+';text-align:center">%</td>'+
-    '<td style="'+TH+';text-align:center">Nominal</td><td style="'+TH+';text-align:center">NOA Tab</td><td style="'+TH+';text-align:center">NOA Dep</td>'+
-    '<td style="'+TH+';text-align:center">Cair Tab</td><td style="'+TH+';text-align:center">Cair Dep</td></tr>'+rows+
-    '<tr style="background:#FFF8E1"><td style="'+TH+'">TOTAL / RATA-RATA</td><td style="'+TH+';text-align:center">'+rngAvg(avgSlip).toFixed(1)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(t.target)+'</td><td style="'+TH+';text-align:center">'+fmt(t.realisasi)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+pctT+'%</td><td style="'+TH+';text-align:right">'+fmtRp(t.nominal)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(t.noaTab)+'</td><td style="'+TH+';text-align:center">'+fmt(t.noaDep)+'</td>'+
-    '<td style="'+TH+';text-align:right">'+fmtRp(t.cairTabNom)+'</td><td style="'+TH+';text-align:right">'+fmtRp(t.cairDepNom)+'</td></tr></table>';
+  var foot='<tr style="background:#FFF8E1"><td style="'+TH+'">REKAP PERIODE</td>'+cols.map(function(c){
+    var v;
+    if(typeof c.tot==='function') v=c.tot(datas);
+    else if(c.tot==='sum') v=rngSum(datas,c.v);
+    else if(c.tot==='avg') v=rngAvgArr(datas.map(function(d){return c.v(d)||0;}).filter(function(x){return x>0;}));
+    else if(c.tot==='last') v=c.v(datas[datas.length-1]||{});
+    else return '<td style="'+TH+';text-align:'+(c.a||'center')+'">–</td>';
+    var st=TH+';text-align:'+(c.a||'center');
+    if(c.c) st+=';color:'+c.c(v);
+    return '<td style="'+st+'">'+(c.f?c.f(v):v)+'</td>';
+  }).join('')+'</tr>';
+  return '<table style="width:100%;border-collapse:collapse">'+head+body+foot+'</table>'+
+    '<div style="font-size:10px;color:#777;margin-top:3px;font-style:italic">Rekap periode: total untuk data akumulatif, rata-rata untuk data harian, posisi akhir untuk data saldo/kolektabilitas.</div>';
 }
 
 function rngTableProduk(months,TD,TH){
@@ -1634,10 +1693,9 @@ function rngTableProduk(months,TD,TH){
   var rows=PRODUK.map(function(p){
     var d=rec[p]; tt+=d.target; tr+=d.realisasi; tn+=d.nominal;
     var pct=rngPct(d.realisasi,d.target);
-    var col=pct>=100?'#2E7D32':pct>=70?'#F57F17':'#C62828';
     return '<tr><td style="'+TD+'">'+p+'</td><td style="'+TD+';text-align:center">'+fmt(d.target)+'</td>'+
       '<td style="'+TD+';text-align:center">'+fmt(d.realisasi)+'</td>'+
-      '<td style="'+TD+';text-align:center;font-weight:700;color:'+col+'">'+pct+'%</td>'+
+      '<td style="'+TD+';text-align:center;font-weight:700;color:'+rngColPct(pct)+'">'+pct+'%</td>'+
       '<td style="'+TD+';text-align:right">'+fmtRp(d.nominal)+'</td></tr>';
   }).join('');
   return '<table style="width:100%;border-collapse:collapse">'+
@@ -1649,56 +1707,62 @@ function rngTableProduk(months,TD,TH){
     '<td style="'+TH+';text-align:right">'+fmtRp(tn)+'</td></tr></table>';
 }
 
-function rngTableAO(months,TD,TH){
-  var t={noaKr:0,cairKr:0,pencairan:0,noa:0,pelunasan:0,angsuran:0}, last={};
-  var rows=months.map(function(m){
-    var d=getStaffData('lending',m,'all');
-    t.noaKr+=d.noaKreditRealisasi||0; t.cairKr+=d.pencairanKreditRealisasi||0;
-    t.pencairan+=d.pencairan||0; t.noa+=d.noa||0; t.pelunasan+=d.pelunasan||0; t.angsuran+=d.angsuran||0;
-    last=d;
-    return '<tr><td style="'+TD+'">'+rngLabel(m)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.noaKreditRealisasi||0)+'</td>'+
-      '<td style="'+TD+';text-align:right">'+fmtRp(d.pencairanKreditRealisasi||0)+'</td>'+
-      '<td style="'+TD+';text-align:right">'+fmtRp(d.pencairan||0)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.noa||0)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.pelunasan||0)+'</td>'+
-      '<td style="'+TD+';text-align:right">'+fmtRp(d.angsuran||0)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.lancar||0)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.dpk||0)+'</td>'+
-      '<td style="'+TD+';text-align:right">'+fmtRp(d.asset||0)+'</td></tr>';
-  }).join('');
-  return '<table style="width:100%;border-collapse:collapse">'+
-    '<tr style="background:#F3E5F5"><td style="'+TH+'">Bulan</td><td style="'+TH+';text-align:center">NOA Kredit</td>'+
-    '<td style="'+TH+';text-align:center">Pencairan Kredit</td><td style="'+TH+';text-align:center">Pencairan</td>'+
-    '<td style="'+TH+';text-align:center">NOA Baru</td><td style="'+TH+';text-align:center">Pelunasan</td>'+
-    '<td style="'+TH+';text-align:center">Angsuran</td><td style="'+TH+';text-align:center">Lancar</td>'+
-    '<td style="'+TH+';text-align:center">DPK</td><td style="'+TH+';text-align:center">Asset</td></tr>'+rows+
-    '<tr style="background:#FFF8E1"><td style="'+TH+'">TOTAL <span style="font-weight:400;font-size:10px">(Lancar/DPK/Asset = posisi akhir)</span></td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(t.noaKr)+'</td><td style="'+TH+';text-align:right">'+fmtRp(t.cairKr)+'</td>'+
-    '<td style="'+TH+';text-align:right">'+fmtRp(t.pencairan)+'</td><td style="'+TH+';text-align:center">'+fmt(t.noa)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(t.pelunasan)+'</td><td style="'+TH+';text-align:right">'+fmtRp(t.angsuran)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(last.lancar||0)+'</td><td style="'+TH+';text-align:center">'+fmt(last.dpk||0)+'</td>'+
-    '<td style="'+TH+';text-align:right">'+fmtRp(last.asset||0)+'</td></tr></table>';
+function rngTableLitigasi(months,TD,TH){
+  var rows='';
+  months.forEach(function(m){
+    (getMonthData(m).litigasi||[]).forEach(function(x){
+      rows+='<tr><td style="'+TD+'">'+rngLabel(m)+'</td><td style="'+TD+'">'+(x.nama||'-')+'</td><td style="'+TD+'">'+(x.norek||'–')+'</td>'+
+        '<td style="'+TD+';text-align:right">'+fmtRp(x.plafon||0)+'</td><td style="'+TD+';text-align:right">'+fmtRp(x.os||0)+'</td>'+
+        '<td style="'+TD+';text-align:center">'+(x.kol||'-')+'</td><td style="'+TD+'">'+(x.status||'-')+'</td></tr>';
+    });
+  });
+  if(!rows) return '';
+  return '<div style="font-size:12px;font-weight:700;margin:12px 0 6px">Daftar Debitur Litigasi</div>'+
+    '<table style="width:100%;border-collapse:collapse"><tr style="background:#FFEBEE"><td style="'+TH+'">Bulan</td><td style="'+TH+'">Nama</td>'+
+    '<td style="'+TH+'">No. Rek</td><td style="'+TH+';text-align:center">Plafon</td><td style="'+TH+';text-align:center">Outstanding</td>'+
+    '<td style="'+TH+';text-align:center">Kol.</td><td style="'+TH+'">Status</td></tr>'+rows+'</table>';
 }
 
-function rngTableRem(months,TD,TH){
-  var totLit=0, last={};
-  var rows=months.map(function(m){
-    var d=getStaffData('remedial',m,'all');
-    var lit=(getMonthData(m).litigasi||[]).length; totLit+=lit; last=d;
-    var npl=(d.kl||0)+(d.drg||0)+(d.macet||0);
-    return '<tr><td style="'+TD+'">'+rngLabel(m)+'</td><td style="'+TD+';text-align:center">'+fmt(d.kl||0)+'</td>'+
-      '<td style="'+TD+';text-align:center">'+fmt(d.drg||0)+'</td><td style="'+TD+';text-align:center">'+fmt(d.macet||0)+'</td>'+
-      '<td style="'+TD+';text-align:center;font-weight:700">'+fmt(npl)+'</td><td style="'+TD+';text-align:center">'+lit+'</td></tr>';
-  }).join('');
-  var nplLast=(last.kl||0)+(last.drg||0)+(last.macet||0);
-  return '<table style="width:100%;border-collapse:collapse">'+
-    '<tr style="background:#FFEBEE"><td style="'+TH+'">Bulan</td><td style="'+TH+';text-align:center">KL</td>'+
-    '<td style="'+TH+';text-align:center">Diragukan</td><td style="'+TH+';text-align:center">Macet</td>'+
-    '<td style="'+TH+';text-align:center">Total NPL</td><td style="'+TH+';text-align:center">Litigasi</td></tr>'+rows+
-    '<tr style="background:#FFF8E1"><td style="'+TH+'">POSISI AKHIR</td><td style="'+TH+';text-align:center">'+fmt(last.kl||0)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(last.drg||0)+'</td><td style="'+TH+';text-align:center">'+fmt(last.macet||0)+'</td>'+
-    '<td style="'+TH+';text-align:center">'+fmt(nplLast)+'</td><td style="'+TH+';text-align:center">'+totLit+' kasus</td></tr></table>';
+// ---------- GRAFIK (hanya bagian & data yang dipilih) ----------
+function buildRangeCharts(months,sel){
+  if(typeof Chart==='undefined') return [];
+  var wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;width:700px;height:600px;background:#fff;';
+  document.body.appendChild(wrap);
+  var labels=months.map(function(m){ return MONTHS_ID[parseInt(m.slice(5))-1].slice(0,3)+' '+m.slice(2,4); });
+  var cfgs=[];
+  if(sel.fld.opChart&&sel.fld.opNasabah) cfgs.push({type:'line',label:'Tren Nasabah/Hari',data:{labels:labels,datasets:[{label:'Nasabah/Hari',data:months.map(function(m){return rngGetOp(m).nasabah||0;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.1)',tension:.4,fill:true}]}});
+  if(sel.fld.opChart&&sel.fld.opSlip) cfgs.push({type:'line',label:'Tren Slip/Hari',data:{labels:labels,datasets:[{label:'Slip/Hari',data:months.map(function(m){return rngGetOp(m).slip||0;}),borderColor:'#1565C0',backgroundColor:'rgba(21,101,192,.1)',tension:.4,fill:true}]}});
+  if(sel.fld.mktChart&&sel.fld.mktTarget) cfgs.push({type:'bar',label:'Target vs Realisasi Funding',data:{labels:labels,datasets:[{label:'Target',data:months.map(function(m){return rngMktTotals(m).target;}),backgroundColor:'rgba(21,101,192,.5)'},{label:'Realisasi',data:months.map(function(m){return rngMktTotals(m).realisasi;}),backgroundColor:'rgba(198,40,40,.7)'}]}});
+  if(sel.fld.mktChart&&sel.fld.mktNominal) cfgs.push({type:'line',label:'Nominal Funding Terhimpun (Rp)',data:{labels:labels,datasets:[{label:'Nominal',data:months.map(function(m){return rngMktTotals(m).nominal;}),borderColor:'#2E7D32',backgroundColor:'rgba(46,125,50,.1)',tension:.4,fill:true}]}});
+  if(sel.fld.mktChart&&sel.fld.mktCair) cfgs.push({type:'bar',label:'Pencairan Tabungan & Deposito (Rp)',data:{labels:labels,datasets:[{label:'Cair Tabungan',data:months.map(function(m){return rngMktTotals(m).cairTabNom;}),backgroundColor:'rgba(46,125,50,.6)'},{label:'Cair Deposito',data:months.map(function(m){return rngMktTotals(m).cairDepNom;}),backgroundColor:'rgba(0,131,143,.7)'}]}});
+  if(sel.fld.aoChart&&sel.fld.aoPencairan) cfgs.push({type:'line',label:'Tren Pencairan AO (Rp)',data:{labels:labels,datasets:[{label:'Pencairan',data:months.map(function(m){return rngGetAO(m).pencairan||0;}),borderColor:'#AD1457',backgroundColor:'rgba(173,20,87,.1)',tension:.4,fill:true}]}});
+  if(sel.fld.aoChart&&sel.fld.aoAsset) cfgs.push({type:'line',label:'Tren Asset (Rp)',data:{labels:labels,datasets:[{label:'Asset',data:months.map(function(m){return rngGetAO(m).asset||0;}),borderColor:'#7B1FA2',backgroundColor:'rgba(123,31,162,.1)',tension:.4,fill:true}]}});
+  if(sel.fld.remChart&&sel.fld.remKol) cfgs.push({type:'line',label:'Tren NPL Kolektabilitas',data:{labels:labels,datasets:[
+    {label:'KL',data:months.map(function(m){return rngGetRem(m).kl;}),borderColor:'#F57F17',tension:.4},
+    {label:'Diragukan',data:months.map(function(m){return rngGetRem(m).drg;}),borderColor:'#E65100',tension:.4},
+    {label:'Macet',data:months.map(function(m){return rngGetRem(m).macet;}),borderColor:'#C62828',tension:.4}]}});
+  if(sel.fld.remChart&&sel.fld.remNpl&&!sel.fld.remKol) cfgs.push({type:'line',label:'Tren Total NPL',data:{labels:labels,datasets:[{label:'Total NPL',data:months.map(function(m){var d=rngGetRem(m);return d.kl+d.drg+d.macet;}),borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.1)',tension:.4,fill:true}]}});
+  var imgs=[];
+  cfgs.forEach(function(c,i){
+    var box=document.createElement('div'); box.style.cssText='width:340px;height:200px;display:inline-block;';
+    var cv=document.createElement('canvas'); cv.id='rngC'+i; box.appendChild(cv); wrap.appendChild(box);
+    try{
+      var ch=new Chart(cv,{type:c.type,data:c.data,options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+      imgs.push({src:cv.toDataURL('image/png'),label:c.label});
+      ch.destroy();
+    }catch(e){}
+  });
+  document.body.removeChild(wrap);
+  return imgs;
+}
+function rngChartHtml(imgs){
+  if(!imgs||!imgs.length) return '';
+  var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  imgs.forEach(function(d){
+    h+='<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#333;margin-bottom:4px">'+d.label+'</div><img src="'+d.src+'" style="width:100%;max-height:200px;object-fit:contain;border:1px solid #eee;border-radius:6px" /></div>';
+  });
+  return h+'</div>';
 }
 
 // ---------- ANALISA OTOMATIS (fallback tanpa AI) ----------
@@ -1708,146 +1772,149 @@ function rngTrend(cur,prev,unit,inverse){
   if(diff===0) return ' <span style="color:#757575">(stabil)</span>';
   var pct=Math.round(Math.abs(diff)/prev*100);
   var good=inverse?diff<0:diff>0;
-  var col=good?'#2E7D32':'#C62828';
-  return ' <span style="color:'+col+';font-weight:700">'+(diff>0?'naik':'turun')+' '+(unit==='rp'?fmtRp(Math.abs(diff)):fmt(Math.abs(diff)))+' ('+pct+'%)</span>';
+  return ' <span style="color:'+(good?'#2E7D32':'#C62828')+';font-weight:700">'+(diff>0?'naik':'turun')+' '+(unit==='rp'?fmtRp(Math.abs(diff)):fmt(Math.abs(diff)))+' ('+pct+'%)</span>';
 }
 function rngBox(color,html){
   return '<div style="padding:10px 14px;border-left:3px solid '+color+';margin-bottom:12px;font-size:12px;line-height:1.9;background:#FAFAFA">'+html+'</div>';
 }
 function rngPoints(color,items){
-  if(!items.length) return '<div style="font-size:12px;color:#777">Tidak ada catatan khusus untuk periode ini.</div>';
+  if(!items.length) return '<div style="font-size:12px;color:#777">Tidak ada catatan khusus untuk data yang dipilih.</div>';
   return items.map(function(t,i){
     return '<div style="padding:8px 12px;border-left:3px solid '+color+';margin-bottom:8px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+t+'</div>';
   }).join('');
 }
 
-function rngAutoAnalisis(months,sec){
+function rngAutoAnalisis(months,sel){
   var f=months[0], l=months[months.length-1], h='', L=0, single=months.length===1;
   function ltr(){ return String.fromCharCode(65+(L++))+'. '; }
   var per=single?rngLabel(f):rngLabel(f)+' s.d. '+rngLabel(l)+' ('+months.length+' bulan)';
-  if(sec.op){
-    var o1=getMonthData(f).operasional||{}, o2=getMonthData(l).operasional||{};
-    var totN=0,totS=0; months.forEach(function(m){var d=getMonthData(m).operasional||{};totN+=d.totalNasabah||0;totS+=d.totalSlip||0;});
-    h+=rngBox('#1565C0','<b>'+ltr()+'Operasional Kas</b><br>Sepanjang '+per+' tercatat <b>'+fmt(totN)+'</b> kunjungan nasabah dan <b>'+fmt(totS)+'</b> slip transaksi. '+
-      (single?'Rata-rata nasabah/hari <b>'+(o2.nasabah||0).toFixed(1)+'</b> dan slip/hari <b>'+(o2.slip||0).toFixed(1)+'</b>.':'Rata-rata nasabah/hari bergerak dari <b>'+(o1.nasabah||0).toFixed(1)+'</b> pada '+rngLabel(f)+' menjadi <b>'+(o2.nasabah||0).toFixed(1)+'</b> pada '+rngLabel(l)+rngTrend(o2.nasabah||0,o1.nasabah||0)+'. Slip/hari bergerak dari <b>'+(o1.slip||0).toFixed(1)+'</b> menjadi <b>'+(o2.slip||0).toFixed(1)+'</b>'+rngTrend(o2.slip||0,o1.slip||0)+'.'));
+  var F=sel.fld;
+  if(sel.sec.op){
+    var o1=rngGetOp(f), o2=rngGetOp(l), t=[];
+    if(F.opNasabah){ var tn=rngSum(months.map(rngGetOp),function(d){return d.totalNasabah||0;});
+      t.push('tercatat <b>'+fmt(tn)+'</b> kunjungan nasabah'+(single?' (rata-rata <b>'+rngF1(o2.nasabah)+'</b>/hari)':', rata-rata/hari bergerak dari <b>'+rngF1(o1.nasabah)+'</b> menjadi <b>'+rngF1(o2.nasabah)+'</b>'+rngTrend(o2.nasabah||0,o1.nasabah||0))); }
+    if(F.opSlip){ var ts=rngSum(months.map(rngGetOp),function(d){return d.totalSlip||0;});
+      t.push('<b>'+fmt(ts)+'</b> slip transaksi'+(single?' (rata-rata <b>'+rngF1(o2.slip)+'</b>/hari)':', rata-rata/hari dari <b>'+rngF1(o1.slip)+'</b> menjadi <b>'+rngF1(o2.slip)+'</b>'+rngTrend(o2.slip||0,o1.slip||0))); }
+    if(F.opTab) t.push('penghimpunan tabungan <b>'+fmt(rngSum(months.map(rngGetOp),function(d){return d.noaTabungan||0;}))+' NOA</b> senilai <b>'+fmtRp(rngSum(months.map(rngGetOp),function(d){return d.nominalTabungan||0;}))+'</b>');
+    if(F.opDep) t.push('deposito <b>'+fmt(rngSum(months.map(rngGetOp),function(d){return d.noaDeposito||0;}))+' NOA</b> senilai <b>'+fmtRp(rngSum(months.map(rngGetOp),function(d){return d.nominalDeposito||0;}))+'</b>');
+    if(t.length) h+=rngBox('#1565C0','<b>'+ltr()+'Operasional Kas</b><br>Sepanjang '+per+' '+t.join('; ')+'.');
   }
-  if(sec.mkt){
-    var m1=rngMktTotals(f), m2=rngMktTotals(l), tt=0,tr=0,tn=0;
-    months.forEach(function(m){var d=rngMktTotals(m);tt+=d.target;tr+=d.realisasi;tn+=d.nominal;});
-    h+=rngBox('#3949AB','<b>'+ltr()+'Marketing / Funding</b><br>Total realisasi funding periode ini <b>'+fmt(tr)+' rekening</b> dari target <b>'+fmt(tt)+'</b> (pencapaian <b>'+rngPct(tr,tt)+'%</b>), dengan nominal terhimpun <b>'+fmtRp(tn)+'</b>. '+
-      (single?'':'Realisasi bulanan bergerak dari <b>'+fmt(m1.realisasi)+'</b> pada '+rngLabel(f)+' menjadi <b>'+fmt(m2.realisasi)+'</b> pada '+rngLabel(l)+rngTrend(m2.realisasi,m1.realisasi)+'.'));
+  if(sel.sec.mkt){
+    var m1=rngMktTotals(f), m2=rngMktTotals(l), t2=[];
+    var ds=months.map(rngMktTotals);
+    if(F.mktTarget){ var tt=rngSum(ds,function(d){return d.target;}), tr=rngSum(ds,function(d){return d.realisasi;});
+      t2.push('realisasi funding <b>'+fmt(tr)+' rekening</b> dari target <b>'+fmt(tt)+'</b> (pencapaian <b>'+rngPct(tr,tt)+'%</b>)'+(single?'':', realisasi bulanan dari <b>'+fmt(m1.realisasi)+'</b> menjadi <b>'+fmt(m2.realisasi)+'</b>'+rngTrend(m2.realisasi,m1.realisasi))); }
+    if(F.mktNominal) t2.push('nominal terhimpun <b>'+fmtRp(rngSum(ds,function(d){return d.nominal;}))+'</b>');
+    if(F.mktSlip) t2.push('rata-rata slip <b>'+rngF1(rngAvgArr(ds.map(function(d){return d.slip;}).filter(function(x){return x>0;})))+'</b>/hari');
+    if(F.mktRek) t2.push('pengelolaan rekening <b>'+fmt(rngSum(ds,function(d){return d.noaTab;}))+'</b> NOA tabungan dan <b>'+fmt(rngSum(ds,function(d){return d.noaDep;}))+'</b> NOA deposito');
+    if(F.mktCair) t2.push('pencairan tabungan <b>'+fmtRp(rngSum(ds,function(d){return d.cairTabNom;}))+'</b> dan deposito <b>'+fmtRp(rngSum(ds,function(d){return d.cairDepNom;}))+'</b>');
+    if(t2.length) h+=rngBox('#3949AB','<b>'+ltr()+'Marketing / Funding</b><br>Periode '+per+': '+t2.join('; ')+'.');
   }
-  if(sec.ao){
-    var a1=getStaffData('lending',f,'all'), a2=getStaffData('lending',l,'all'), tp=0,tn2=0;
-    months.forEach(function(m){var d=getStaffData('lending',m,'all');tp+=d.pencairan||0;tn2+=d.noa||0;});
-    h+=rngBox('#7B1FA2','<b>'+ltr()+'AO Lending</b><br>Akumulasi pencairan kredit sepanjang periode <b>'+fmtRp(tp)+'</b> dengan <b>'+fmt(tn2)+' NOA</b> baru. '+
-      (single?'Posisi asset <b>'+fmtRp(a2.asset||0)+'</b>.':'Pencairan bulanan bergerak dari <b>'+fmtRp(a1.pencairan||0)+'</b> menjadi <b>'+fmtRp(a2.pencairan||0)+'</b>'+rngTrend(a2.pencairan||0,a1.pencairan||0,'rp')+'. Posisi asset akhir periode <b>'+fmtRp(a2.asset||0)+'</b>'+rngTrend(a2.asset||0,a1.asset||0,'rp')+'.'));
+  if(sel.sec.ao){
+    var a1=rngGetAO(f), a2=rngGetAO(l), t3=[], das=months.map(rngGetAO);
+    if(F.aoPencairan) t3.push('akumulasi pencairan <b>'+fmtRp(rngSum(das,function(d){return d.pencairan||0;}))+'</b>'+(single?'':', bulanan dari <b>'+fmtRp(a1.pencairan||0)+'</b> menjadi <b>'+fmtRp(a2.pencairan||0)+'</b>'+rngTrend(a2.pencairan||0,a1.pencairan||0,'rp')));
+    if(F.aoKredit) t3.push('realisasi kredit <b>'+fmt(rngSum(das,function(d){return d.noaKreditRealisasi||0;}))+' NOA</b> senilai <b>'+fmtRp(rngSum(das,function(d){return d.pencairanKreditRealisasi||0;}))+'</b>');
+    if(F.aoNoa) t3.push('<b>'+fmt(rngSum(das,function(d){return d.noa||0;}))+'</b> NOA baru dan <b>'+fmt(rngSum(das,function(d){return d.pelunasan||0;}))+'</b> pelunasan');
+    if(F.aoAngsuran) t3.push('angsuran masuk <b>'+fmtRp(rngSum(das,function(d){return d.angsuran||0;}))+'</b>');
+    if(F.aoKol) t3.push('posisi akhir Lancar <b>'+fmt(a2.lancar||0)+'</b> dan DPK <b>'+fmt(a2.dpk||0)+'</b>');
+    if(F.aoAsset) t3.push('asset akhir periode <b>'+fmtRp(a2.asset||0)+'</b>'+(single?'':rngTrend(a2.asset||0,a1.asset||0,'rp')));
+    if(t3.length) h+=rngBox('#7B1FA2','<b>'+ltr()+'AO Lending</b><br>Periode '+per+': '+t3.join('; ')+'.');
   }
-  if(sec.rem){
-    var r1=getStaffData('remedial',f,'all'), r2=getStaffData('remedial',l,'all');
-    var n1=(r1.kl||0)+(r1.drg||0)+(r1.macet||0), n2=(r2.kl||0)+(r2.drg||0)+(r2.macet||0), tl=0;
-    months.forEach(function(m){tl+=(getMonthData(m).litigasi||[]).length;});
-    h+=rngBox('#C62828','<b>'+ltr()+'Remedial</b><br>'+(single?'Total NPL <b>'+fmt(n2)+' debitur</b>. ':'Total NPL bergerak dari <b>'+fmt(n1)+' debitur</b> pada '+rngLabel(f)+' menjadi <b>'+fmt(n2)+' debitur</b> pada '+rngLabel(l)+rngTrend(n2,n1,'',true)+'. ')+
-      'Komposisi akhir: KL <b>'+fmt(r2.kl||0)+'</b>, Diragukan <b>'+fmt(r2.drg||0)+'</b>, Macet <b>'+fmt(r2.macet||0)+'</b>. Tercatat <b>'+tl+'</b> kasus litigasi sepanjang periode.');
+  if(sel.sec.rem){
+    var r1=rngGetRem(f), r2=rngGetRem(l), t4=[];
+    var n1=r1.kl+r1.drg+r1.macet, n2=r2.kl+r2.drg+r2.macet;
+    if(F.remNpl) t4.push(single?'total NPL <b>'+fmt(n2)+' debitur</b>':'total NPL dari <b>'+fmt(n1)+' debitur</b> pada '+rngLabel(f)+' menjadi <b>'+fmt(n2)+'</b> pada '+rngLabel(l)+rngTrend(n2,n1,'',true));
+    if(F.remKol) t4.push('komposisi akhir KL <b>'+fmt(r2.kl)+'</b>, Diragukan <b>'+fmt(r2.drg)+'</b>, Macet <b>'+fmt(r2.macet)+'</b>');
+    if(F.remLit||F.remLitList) t4.push('<b>'+rngSum(months.map(rngGetRem),function(d){return d.lit;})+'</b> kasus litigasi');
+    if(t4.length) h+=rngBox('#C62828','<b>'+ltr()+'Remedial</b><br>Periode '+per+': '+t4.join('; ')+'.');
   }
-  return h||'<div style="font-size:12px;color:#777">Tidak ada bagian yang dipilih.</div>';
+  return h||'<div style="font-size:12px;color:#777">Tidak ada data yang dipilih untuk dianalisa.</div>';
 }
 
-function rngAutoDitingkatkan(months,sec){
-  var l=months[months.length-1], items=[];
-  if(sec.mkt){
-    var tt=0,tr=0; months.forEach(function(m){var d=rngMktTotals(m);tt+=d.target;tr+=d.realisasi;});
+function rngAutoDitingkatkan(months,sel){
+  var l=months[months.length-1], items=[], F=sel.fld;
+  if(sel.sec.mkt&&F.mktTarget){
+    var ds=months.map(rngMktTotals);
+    var tt=rngSum(ds,function(d){return d.target;}), tr=rngSum(ds,function(d){return d.realisasi;});
     var pct=rngPct(tr,tt);
-    if(tt>0&&pct<100) items.push('Pencapaian target funding periode ini baru <b>'+pct+'%</b> ('+fmt(tr)+' dari '+fmt(tt)+'). Perlu evaluasi strategi penghimpunan dana per produk.');
+    if(tt>0&&pct<100) items.push('Pencapaian target funding periode ini baru <b>'+pct+'%</b> ('+fmt(tr)+' dari '+fmt(tt)+'). Perlu evaluasi strategi penghimpunan dana.');
+  }
+  if(sel.sec.mkt&&F.mktProduk){
     var rec=rngProdukRecap(months);
     PRODUK.forEach(function(p){
       var d=rec[p];
       if(d.target>0&&rngPct(d.realisasi,d.target)<70) items.push('Produk <b>'+p+'</b> hanya tercapai <b>'+rngPct(d.realisasi,d.target)+'%</b> ('+fmt(d.realisasi)+' dari '+fmt(d.target)+') sepanjang periode.');
     });
   }
-  if(sec.rem){
-    var r=getStaffData('remedial',l,'all'); var npl=(r.kl||0)+(r.drg||0)+(r.macet||0);
-    if(npl>0) items.push('Posisi NPL akhir periode <b>'+fmt(npl)+' debitur</b> (Macet '+fmt(r.macet||0)+'). Penanganan kolektabilitas perlu diintensifkan.');
+  if(sel.sec.mkt&&F.mktCair){
+    var tc=rngSum(months.map(rngMktTotals),function(d){return d.cairTabNom+d.cairDepNom;});
+    if(tc>0) items.push('Total pencairan dana nasabah mencapai <b>'+fmtRp(tc)+'</b> sepanjang periode. Perlu program retensi agar dana tidak keluar.');
   }
-  if(sec.ao){
-    var a=getStaffData('lending',l,'all');
+  if(sel.sec.rem&&(F.remNpl||F.remKol)){
+    var r=rngGetRem(l), npl=r.kl+r.drg+r.macet;
+    if(npl>0) items.push('Posisi NPL akhir periode <b>'+fmt(npl)+' debitur</b> (Macet '+fmt(r.macet)+'). Penanganan kolektabilitas perlu diintensifkan.');
+  }
+  if(sel.sec.ao&&F.aoKredit){
+    var a=rngGetAO(l);
     if((a.noaKreditTarget||0)>0&&(a.noaKreditRealisasi||0)<(a.noaKreditTarget||0)) items.push('Realisasi NOA kredit bulan '+rngLabel(l)+' (<b>'+fmt(a.noaKreditRealisasi||0)+'</b>) masih di bawah target (<b>'+fmt(a.noaKreditTarget||0)+'</b>).');
   }
-  if(sec.op){
-    var o=getMonthData(l).operasional||{};
+  if(sel.sec.op&&F.opNasabah){
+    var o=rngGetOp(l);
     if(!o.totalNasabah) items.push('Data operasional bulan '+rngLabel(l)+' belum lengkap. Lengkapi input agar analisa periode lebih akurat.');
   }
   return rngPoints('#E65100',items.slice(0,6));
 }
 
-function rngAutoPerbaikan(months,sec){
-  var items=[];
-  if(sec.mkt) items.push('Susun program penghimpunan dana terarah pada produk dengan capaian terendah, disertai target mingguan per petugas funding.');
-  if(sec.mkt) items.push('Tingkatkan kualitas pengelolaan rekening existing untuk menekan angka pencairan tabungan dan deposito.');
-  if(sec.ao) items.push('Perkuat pipeline calon debitur dan percepat proses analisa kredit agar realisasi pencairan sesuai target bulanan.');
-  if(sec.rem) items.push('Lakukan penagihan intensif dan restrukturisasi terukur pada debitur kolektabilitas KL dan Diragukan sebelum turun ke Macet.');
-  if(sec.op) items.push('Optimalkan pelayanan kas pada jam sibuk untuk menjaga rata-rata nasabah dan slip harian tetap tumbuh.');
+function rngAutoPerbaikan(months,sel){
+  var items=[], F=sel.fld;
+  if(sel.sec.mkt&&F.mktTarget) items.push('Susun program penghimpunan dana terarah pada produk dengan capaian terendah, disertai target mingguan per petugas funding.');
+  if(sel.sec.mkt&&F.mktCair) items.push('Tingkatkan kualitas pengelolaan rekening existing untuk menekan angka pencairan tabungan dan deposito.');
+  if(sel.sec.ao) items.push('Perkuat pipeline calon debitur dan percepat proses analisa kredit agar realisasi pencairan sesuai target bulanan.');
+  if(sel.sec.rem) items.push('Lakukan penagihan intensif dan restrukturisasi terukur pada debitur kolektabilitas KL dan Diragukan sebelum turun ke Macet.');
+  if(sel.sec.op) items.push('Optimalkan pelayanan kas pada jam sibuk untuk menjaga rata-rata nasabah dan slip harian tetap tumbuh.');
   items.push('Rapat koordinasi berkala antar bagian untuk sinkronisasi data dan evaluasi capaian periode berjalan.');
   return rngPoints('#1B5E20',items.slice(0,6));
 }
 
 // ---------- SUSUN LAPORAN ----------
-function buildRangeReportHtml(months,sec){
+function buildRangeReportHtml(months,sel){
   var TD='padding:5px 7px;border:1px solid #ccc;font-size:11px';
   var TH=TD+';font-weight:700';
   var f=months[0], l=months[months.length-1];
-  var charts=buildRangeCharts(months,sec);
-  var n=0;
-  var totFundR=0, totFundN=0, totCair=0, totNasabah=0;
-  months.forEach(function(m){
-    var mk=rngMktTotals(m); totFundR+=mk.realisasi; totFundN+=mk.nominal;
-    totCair+=getStaffData('lending',m,'all').pencairan||0;
-    totNasabah+=(getMonthData(m).operasional||{}).totalNasabah||0;
+  var charts=buildRangeCharts(months,sel);
+  var picked=rngPickedSections(sel);
+  var n=0, body='';
+
+  picked.forEach(function(s){
+    n++;
+    var cols=rngPickedCols(s,sel);
+    var staffKey={op:'operasional',mkt:'marketing',ao:'lending',rem:'remedial'}[s.key];
+    var staffLbl={op:'Petugas',mkt:'Petugas Funding',ao:'Petugas AO',rem:'Petugas Remedial'}[s.key];
+    var extra='';
+    if(s.key==='mkt'&&sel.fld.mktProduk) extra+='<div style="font-size:12px;font-weight:700;margin:12px 0 6px">Rekapitulasi per Produk (akumulasi periode)</div>'+rngTableProduk(months,TD,TH);
+    if(s.key==='rem'&&sel.fld.remLitList) extra+=rngTableLitigasi(months,TD,TH);
+    body+='<div style="margin-bottom:22px">'+
+      '<div style="font-size:14px;font-weight:700;background:'+s.color+';color:#fff;padding:6px 12px;margin-bottom:10px;border-radius:2px">'+RNG_ROMAN[n-1]+'. '+s.label.toUpperCase()+'</div>'+
+      '<div style="margin-bottom:8px;font-size:12px">'+staffLbl+': <b>'+(rngStaffNames(staffKey,months).join(', ')||'–')+'</b></div>'+
+      rngTable(months,cols,s.get,s.bg,TD,TH)+extra+'</div>';
   });
-  var remLast=getStaffData('remedial',l,'all');
-  var nplLast=(remLast.kl||0)+(remLast.drg||0)+(remLast.macet||0);
 
-  var boxes='';
-  if(sec.op)  boxes+='<div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #C62828"><div style="color:#888;margin-bottom:4px">Total Nasabah</div><div style="font-size:17px;font-weight:800;color:#C62828">'+fmt(totNasabah)+'</div></div>';
-  if(sec.mkt) boxes+='<div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #1565C0"><div style="color:#888;margin-bottom:4px">Realisasi Funding</div><div style="font-size:17px;font-weight:800;color:#1565C0">'+fmt(totFundR)+'</div><div style="font-size:10px;color:#555">'+fmtRp(totFundN)+'</div></div>';
-  if(sec.ao)  boxes+='<div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #AD1457"><div style="color:#888;margin-bottom:4px">Pencairan AO</div><div style="font-size:13px;font-weight:800;color:#AD1457">'+fmtRp(totCair)+'</div></div>';
-  if(sec.rem) boxes+='<div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #E65100"><div style="color:#888;margin-bottom:4px">NPL Posisi Akhir</div><div style="font-size:17px;font-weight:800;color:#E65100">'+fmt(nplLast)+'</div></div>';
+  // ringkasan periode: hanya metrik yang datanya dipilih
+  var boxes=[], F=sel.fld;
+  if(sel.sec.op&&F.opNasabah) boxes.push({c:'#C62828',t:'Total Nasabah',v:fmt(rngSum(months.map(rngGetOp),function(d){return d.totalNasabah||0;}))});
+  if(sel.sec.mkt&&F.mktTarget) boxes.push({c:'#1565C0',t:'Realisasi Funding',v:fmt(rngSum(months.map(rngMktTotals),function(d){return d.realisasi;}))});
+  if(sel.sec.mkt&&F.mktNominal) boxes.push({c:'#2E7D32',t:'Nominal Funding',v:fmtRp(rngSum(months.map(rngMktTotals),function(d){return d.nominal;})),sm:true});
+  if(sel.sec.ao&&F.aoPencairan) boxes.push({c:'#AD1457',t:'Pencairan AO',v:fmtRp(rngSum(months.map(rngGetAO),function(d){return d.pencairan||0;})),sm:true});
+  if(sel.sec.rem&&(F.remNpl||F.remKol)) boxes.push({c:'#E65100',t:'NPL Posisi Akhir',v:(function(){var r=rngGetRem(l);return fmt(r.kl+r.drg+r.macet);})()});
+  var boxHtml=boxes.map(function(b){
+    return '<div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid '+b.c+'">'+
+      '<div style="color:#888;margin-bottom:4px">'+b.t+'</div>'+
+      '<div style="font-size:'+(b.sm?'13':'17')+'px;font-weight:800;color:'+b.c+'">'+b.v+'</div></div>';
+  }).join('');
 
-  var body='';
-  if(sec.op){
-    n++;
-    body+='<div style="margin-bottom:22px"><div style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:10px;border-radius:2px">'+RNG_ROMAN[n-1]+'. OPERASIONAL KAS</div>'+
-      '<div style="margin-bottom:8px;font-size:12px">Petugas: <b>'+(rngStaffNames('operasional',months).join(', ')||'–')+'</b></div>'+
-      rngTableOp(months,TD,TH)+'</div>';
-  }
-  if(sec.mkt){
-    n++;
-    body+='<div style="margin-bottom:22px"><div style="font-size:14px;font-weight:700;background:#3949AB;color:#fff;padding:6px 12px;margin-bottom:10px;border-radius:2px">'+RNG_ROMAN[n-1]+'. MARKETING / FUNDING</div>'+
-      '<div style="margin-bottom:8px;font-size:12px">Petugas Funding: <b>'+(rngStaffNames('marketing',months).join(', ')||'–')+'</b></div>'+
-      rngTableMkt(months,TD,TH)+
-      '<div style="font-size:12px;font-weight:700;margin:12px 0 6px">Rekapitulasi per Produk (akumulasi periode)</div>'+
-      rngTableProduk(months,TD,TH)+'</div>';
-  }
-  if(sec.ao){
-    n++;
-    body+='<div style="margin-bottom:22px"><div style="font-size:14px;font-weight:700;background:#7B1FA2;color:#fff;padding:6px 12px;margin-bottom:10px;border-radius:2px">'+RNG_ROMAN[n-1]+'. AO LENDING</div>'+
-      '<div style="margin-bottom:8px;font-size:12px">Petugas AO: <b>'+(rngStaffNames('lending',months).join(', ')||'–')+'</b></div>'+
-      rngTableAO(months,TD,TH)+'</div>';
-  }
-  if(sec.rem){
-    n++;
-    var lits='';
-    months.forEach(function(m){
-      (getMonthData(m).litigasi||[]).forEach(function(x){
-        lits+='<tr><td style="'+TD+'">'+rngLabel(m)+'</td><td style="'+TD+'">'+(x.nama||'-')+'</td><td style="'+TD+'">'+(x.norek||'–')+'</td><td style="'+TD+';text-align:right">'+fmtRp(x.plafon||0)+'</td><td style="'+TD+';text-align:right">'+fmtRp(x.os||0)+'</td><td style="'+TD+';text-align:center">'+(x.kol||'-')+'</td><td style="'+TD+'">'+(x.status||'-')+'</td></tr>';
-      });
-    });
-    body+='<div style="margin-bottom:22px"><div style="font-size:14px;font-weight:700;background:#C62828;color:#fff;padding:6px 12px;margin-bottom:10px;border-radius:2px">'+RNG_ROMAN[n-1]+'. REMEDIAL</div>'+
-      '<div style="margin-bottom:8px;font-size:12px">Petugas Remedial: <b>'+(rngStaffNames('remedial',months).join(', ')||'–')+'</b></div>'+
-      rngTableRem(months,TD,TH)+
-      (lits?'<div style="font-size:12px;font-weight:700;margin:12px 0 6px">Daftar Debitur Litigasi</div><table style="width:100%;border-collapse:collapse"><tr style="background:#FFEBEE"><td style="'+TH+'">Bulan</td><td style="'+TH+'">Nama</td><td style="'+TH+'">No. Rek</td><td style="'+TH+';text-align:center">Plafon</td><td style="'+TH+';text-align:center">Outstanding</td><td style="'+TH+';text-align:center">Kol.</td><td style="'+TH+'">Status</td></tr>'+lits+'</table>':'')+
-      '</div>';
-  }
+  var rincian=picked.map(function(s){
+    return s.label+' ('+s.fields.filter(function(x){return sel.fld[x.id];}).map(function(x){return x.label;}).join(', ')+')';
+  }).join(' · ');
 
   return '<div style="max-width:740px;margin:0 auto;font-family:\'Times New Roman\',serif;color:#000;font-size:13px;line-height:1.6">'+
     '<div style="text-align:center;padding-bottom:14px;margin-bottom:20px;border-bottom:3px double #C62828">'+
@@ -1859,22 +1926,22 @@ function buildRangeReportHtml(months,sec){
       '</div>'+
       '<div style="background:linear-gradient(90deg,#C62828,#8B0000);color:#fff;padding:8px;font-size:16px;font-weight:700;letter-spacing:1.5px;margin-top:10px;border-radius:2px">LAPORAN KINERJA PERIODE KANTOR KAS</div>'+
       '<div style="font-size:13px;margin-top:8px">Periode: <b>'+rngLabel(f)+'</b> s.d. <b>'+rngLabel(l)+'</b> ('+months.length+' bulan)</div>'+
-      '<div style="font-size:12px;color:#555;margin-top:2px">Cakupan data: <b>'+RNG_SEC.filter(function(x){return sec[x.key];}).map(function(x){return x.label;}).join(' · ')+'</b></div>'+
+      '<div style="font-size:11px;color:#555;margin-top:3px;line-height:1.5">Cakupan data: '+rincian+'</div>'+
       '<div style="font-size:11px;color:#999;margin-top:4px">Dicetak: '+new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>'+
     '</div>'+
-    (boxes?'<div style="margin-bottom:22px;background:#F8F9FA;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px">'+
+    (boxHtml?'<div style="margin-bottom:22px;background:#F8F9FA;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px">'+
       '<div style="font-size:13px;font-weight:700;color:#37474F;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Ringkasan Periode</div>'+
-      '<div style="display:grid;grid-template-columns:repeat('+Math.max(1,RNG_SEC.filter(function(x){return sec[x.key];}).length)+',1fr);gap:10px;font-size:11px">'+boxes+'</div></div>':'')+
+      '<div style="display:grid;grid-template-columns:repeat('+Math.max(1,Math.min(boxes.length,4))+',1fr);gap:10px;font-size:11px">'+boxHtml+'</div></div>':'')+
     body+
     '<div style="margin-top:24px;padding-top:16px;border-top:2px solid #C62828">'+
       '<div style="font-size:14px;font-weight:700;background:#37474F;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n]+'. ANALISIS DATA PERIODE</div>'+
-      '<div data-rng-ai="analisis" style="font-size:12px;line-height:1.7">'+rngAutoAnalisis(months,sec)+'</div>'+
+      '<div data-rng-ai="analisis" style="font-size:12px;line-height:1.7">'+rngAutoAnalisis(months,sel)+'</div>'+
       (charts.length?'<div style="margin-top:14px"><div style="font-size:12px;font-weight:700;color:#37474F;margin-bottom:8px;border-bottom:1px solid #ddd;padding-bottom:4px">Grafik Tren Periode</div>'+rngChartHtml(charts)+'</div>':'')+
     '</div>'+
     '<div style="margin-top:18px"><div style="font-size:14px;font-weight:700;background:#E65100;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n+1]+'. HAL-HAL YANG HARUS DITINGKATKAN</div>'+
-      '<div data-rng-ai="ditingkatkan">'+rngAutoDitingkatkan(months,sec)+'</div></div>'+
+      '<div data-rng-ai="ditingkatkan">'+rngAutoDitingkatkan(months,sel)+'</div></div>'+
     '<div style="margin-top:18px"><div style="font-size:14px;font-weight:700;background:#1B5E20;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n+2]+'. LANGKAH PERBAIKAN</div>'+
-      '<div data-rng-ai="perbaikan">'+rngAutoPerbaikan(months,sec)+'</div></div>'+
+      '<div data-rng-ai="perbaikan">'+rngAutoPerbaikan(months,sel)+'</div></div>'+
     '<div style="margin-top:50px;display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px">'+
       '<div style="text-align:center"><div style="font-weight:600">Mengetahui,</div>'+
         '<div style="margin:52px 0 4px;border-bottom:1px solid #000;display:inline-block;padding-bottom:2px"><b>Rojikin</b></div>'+
@@ -1887,60 +1954,83 @@ function buildRangeReportHtml(months,sec){
 }
 
 // ---------- ANALISA AI SESUAI DATA YANG DIMINTA ----------
-function buildRangePrompt(months,sec){
-  var f=months[0], l=months[months.length-1];
-  var pick=RNG_SEC.filter(function(x){return sec[x.key];}).map(function(x){return x.label;});
+function buildRangePrompt(months,sel){
+  var f=months[0], l=months[months.length-1], F=sel.fld;
+  var picked=rngPickedSections(sel);
+  var rincian=picked.map(function(s){
+    return s.label+' ['+s.fields.filter(function(x){return F[x.id];}).map(function(x){return x.label;}).join('; ')+']';
+  });
   var p='Analisis kinerja BPR Bank Surya Yudha - Kantor Kas Segamas untuk PERIODE '+rngLabel(f)+' sampai '+rngLabel(l)+' ('+months.length+' bulan).\n';
-  p+='PENTING: analisis HANYA mencakup bagian berikut dan HANYA rentang bulan di atas: '+pick.join(', ')+'. Jangan membahas bagian lain.\n\n';
-  p+='===== DATA PER BULAN =====\n';
-  if(sec.op){
+  p+='PENTING: analisis HANYA boleh membahas rentang bulan di atas dan HANYA data berikut. Jangan menyinggung bagian atau data yang tidak disebutkan.\n';
+  rincian.forEach(function(r){ p+='  - '+r+'\n'; });
+  p+='\n===== DATA PER BULAN =====\n';
+  if(sel.sec.op){
     p+='\nOPERASIONAL KAS:\n';
     months.forEach(function(m){
-      var d=getMonthData(m).operasional||{};
-      p+='  '+rngLabel(m)+': hari kerja '+(d.hariKerja||0)+', total nasabah '+fmt(d.totalNasabah||0)+' (avg '+(d.nasabah||0).toFixed(1)+'/hari), total slip '+fmt(d.totalSlip||0)+' (avg '+(d.slip||0).toFixed(1)+'/hari), NOA tabungan '+fmt(d.noaTabungan||0)+' senilai '+fmtRp(d.nominalTabungan||0)+', NOA deposito '+fmt(d.noaDeposito||0)+' senilai '+fmtRp(d.nominalDeposito||0)+'\n';
+      var d=rngGetOp(m), b=[];
+      if(F.opHari) b.push('hari kerja '+(d.hariKerja||0));
+      if(F.opNasabah) b.push('total nasabah '+fmt(d.totalNasabah||0)+' (avg '+rngF1(d.nasabah)+'/hari)');
+      if(F.opSlip) b.push('total slip '+fmt(d.totalSlip||0)+' (avg '+rngF1(d.slip)+'/hari)');
+      if(F.opTab) b.push('NOA tabungan '+fmt(d.noaTabungan||0)+' senilai '+fmtRp(d.nominalTabungan||0));
+      if(F.opDep) b.push('NOA deposito '+fmt(d.noaDeposito||0)+' senilai '+fmtRp(d.nominalDeposito||0));
+      p+='  '+rngLabel(m)+': '+b.join(', ')+'\n';
     });
   }
-  if(sec.mkt){
+  if(sel.sec.mkt){
     p+='\nMARKETING / FUNDING:\n';
     months.forEach(function(m){
-      var d=rngMktTotals(m);
-      p+='  '+rngLabel(m)+': slip/hari '+d.slip.toFixed(1)+', target '+fmt(d.target)+', realisasi '+fmt(d.realisasi)+' ('+rngPct(d.realisasi,d.target)+'%), nominal '+fmtRp(d.nominal)+
-         ', NOA tab '+fmt(d.noaTab)+', pgl tab '+fmt(d.pglTab)+', NOA dep '+fmt(d.noaDep)+', pgl dep '+fmt(d.pglDep)+
-         ', pencairan tabungan '+fmt(d.cairTab)+' rek '+fmtRp(d.cairTabNom)+', pencairan deposito '+fmt(d.cairDep)+' rek '+fmtRp(d.cairDepNom)+'\n';
+      var d=rngMktTotals(m), b=[];
+      if(F.mktSlip) b.push('slip/hari '+rngF1(d.slip));
+      if(F.mktTarget) b.push('target '+fmt(d.target)+', realisasi '+fmt(d.realisasi)+' ('+rngPct(d.realisasi,d.target)+'%)');
+      if(F.mktNominal) b.push('nominal '+fmtRp(d.nominal));
+      if(F.mktRek) b.push('NOA tab '+fmt(d.noaTab)+', pgl tab '+fmt(d.pglTab)+', NOA dep '+fmt(d.noaDep)+', pgl dep '+fmt(d.pglDep));
+      if(F.mktCair) b.push('pencairan tabungan '+fmt(d.cairTab)+' rek '+fmtRp(d.cairTabNom)+', pencairan deposito '+fmt(d.cairDep)+' rek '+fmtRp(d.cairDepNom));
+      p+='  '+rngLabel(m)+': '+b.join(', ')+'\n';
     });
-    var rec=rngProdukRecap(months);
-    p+='  Akumulasi per produk sepanjang periode:\n';
-    PRODUK.forEach(function(pr){
-      var d=rec[pr];
-      p+='    '+pr+': target '+fmt(d.target)+', realisasi '+fmt(d.realisasi)+' ('+rngPct(d.realisasi,d.target)+'%), nominal '+fmtRp(d.nominal)+'\n';
-    });
+    if(F.mktProduk){
+      var rec=rngProdukRecap(months);
+      p+='  Akumulasi per produk sepanjang periode:\n';
+      PRODUK.forEach(function(pr){
+        var d=rec[pr];
+        p+='    '+pr+': target '+fmt(d.target)+', realisasi '+fmt(d.realisasi)+' ('+rngPct(d.realisasi,d.target)+'%), nominal '+fmtRp(d.nominal)+'\n';
+      });
+    }
   }
-  if(sec.ao){
+  if(sel.sec.ao){
     p+='\nAO LENDING:\n';
     months.forEach(function(m){
-      var d=getStaffData('lending',m,'all');
-      p+='  '+rngLabel(m)+': NOA kredit '+fmt(d.noaKreditRealisasi||0)+' (target '+fmt(d.noaKreditTarget||0)+'), pencairan kredit '+fmtRp(d.pencairanKreditRealisasi||0)+' (target '+fmtRp(d.pencairanKreditTarget||0)+'), pencairan '+fmtRp(d.pencairan||0)+', NOA baru '+fmt(d.noa||0)+', pelunasan '+fmt(d.pelunasan||0)+', angsuran '+fmtRp(d.angsuran||0)+', lancar '+fmt(d.lancar||0)+', DPK '+fmt(d.dpk||0)+', asset '+fmtRp(d.asset||0)+'\n';
+      var d=rngGetAO(m), b=[];
+      if(F.aoKredit) b.push('NOA kredit '+fmt(d.noaKreditRealisasi||0)+' (target '+fmt(d.noaKreditTarget||0)+'), pencairan kredit '+fmtRp(d.pencairanKreditRealisasi||0)+' (target '+fmtRp(d.pencairanKreditTarget||0)+')');
+      if(F.aoPencairan) b.push('pencairan '+fmtRp(d.pencairan||0));
+      if(F.aoNoa) b.push('NOA baru '+fmt(d.noa||0)+', pelunasan '+fmt(d.pelunasan||0));
+      if(F.aoAngsuran) b.push('angsuran '+fmtRp(d.angsuran||0));
+      if(F.aoKol) b.push('lancar '+fmt(d.lancar||0)+', DPK '+fmt(d.dpk||0));
+      if(F.aoAsset) b.push('asset '+fmtRp(d.asset||0));
+      p+='  '+rngLabel(m)+': '+b.join(', ')+'\n';
     });
   }
-  if(sec.rem){
+  if(sel.sec.rem){
     p+='\nREMEDIAL (NPL):\n';
     months.forEach(function(m){
-      var d=getStaffData('remedial',m,'all');
-      var npl=(d.kl||0)+(d.drg||0)+(d.macet||0);
-      p+='  '+rngLabel(m)+': KL '+fmt(d.kl||0)+', Diragukan '+fmt(d.drg||0)+', Macet '+fmt(d.macet||0)+', total NPL '+fmt(npl)+', litigasi '+((getMonthData(m).litigasi||[]).length)+' kasus\n';
+      var d=rngGetRem(m), b=[];
+      if(F.remKol) b.push('KL '+fmt(d.kl)+', Diragukan '+fmt(d.drg)+', Macet '+fmt(d.macet));
+      if(F.remNpl) b.push('total NPL '+fmt(d.kl+d.drg+d.macet));
+      if(F.remLit||F.remLitList) b.push('litigasi '+d.lit+' kasus');
+      p+='  '+rngLabel(m)+': '+b.join(', ')+'\n';
     });
   }
   p+='\n===== INSTRUKSI OUTPUT =====\n';
-  p+='Susun 3 bagian analisis dalam HTML MURNI (langsung tag HTML, JANGAN pakai markdown/code block):\n\n';
+  p+='Susun 3 bagian analisis dalam HTML MURNI (langsung tag HTML, JANGAN pakai markdown/code block). Jangan menulis judul dokumen atau tanggal di awal.\n\n';
   p+='1. ANALISIS DATA DESKRIPTIF\n';
-  p+='   - Buat sub-bagian HANYA untuk: '+pick.join(', ')+'\n';
+  p+='   - Buat sub-bagian HANYA untuk: '+picked.map(function(s){return s.label;}).join(', ')+'\n';
+  p+='   - Bahas HANYA data yang disebutkan pada tiap bagian di atas; jangan mengarang data yang tidak diberikan\n';
   p+='   - Tiap sub-bagian dalam: <div style="padding:10px 14px;border-left:3px solid #1565C0;margin-bottom:12px;font-size:12px;line-height:1.9;background:#FAFAFA">\n';
-  p+='   - Awali dengan <b>judul tebal</b>, contoh: <b>A. '+pick[0]+'</b>\n';
-  p+='   - WAJIB cantumkan angka aktual, tren antar bulan sepanjang periode, dan akumulasi/rata-rata periode\n';
+  p+='   - Awali dengan <b>judul tebal</b>, contoh: <b>A. '+(picked[0]?picked[0].label:'')+'</b>\n';
+  p+='   - WAJIB cantumkan angka aktual, tren antar bulan, dan akumulasi/rata-rata periode\n';
   p+='   - Gunakan <b style="color:#2E7D32"> untuk tren positif, <b style="color:#C62828"> untuk tren negatif\n';
   p+='   - Berikan interpretasi bisnis, bukan sekadar menyebut angka\n\n';
   p+='2. HAL-HAL YANG HARUS DITINGKATKAN\n';
-  p+='   - 4-6 poin bernomor, hanya menyangkut bagian yang diminta\n';
+  p+='   - 4-6 poin bernomor, hanya menyangkut data yang diminta\n';
   p+='   - Sebutkan data spesifik dari periode di atas yang mendasari rekomendasi\n\n';
   p+='3. LANGKAH PERBAIKAN\n';
   p+='   - 4-6 poin bernomor, langkah konkret dan terukur\n\n';
@@ -1948,12 +2038,12 @@ function buildRangePrompt(months,sec){
   return p;
 }
 
-async function generateRangeAI(months,sec){
+async function generateRangeAI(months,sel){
   var host=document.getElementById('rangePdfPreview');
   if(!host) return;
   var divs=host.querySelectorAll('[data-rng-ai]');
   if(!divs.length) return;
-  var fp=hashCode(months.map(function(m){return JSON.stringify(db[m]||{});}).join('|')+'|'+JSON.stringify(sec));
+  var fp=hashCode(months.map(function(m){return JSON.stringify(db[m]||{});}).join('|')+'|'+JSON.stringify(sel.fld));
   var cacheKey='sgm_rng_'+months[0]+'_'+months[months.length-1]+'_'+fp;
   try{
     var cached=localStorage.getItem(cacheKey);
@@ -1965,22 +2055,29 @@ async function generateRangeAI(months,sec){
     }
   }catch(e){}
   try{
-    var result=await callGPT(buildRangePrompt(months,sec));
+    var result=await callGPT(buildRangePrompt(months,sel));
     result=result.replace(/```html\n?/gi,'').replace(/```\n?/g,'').replace(/<\/?html>/gi,'').replace(/<\/?body>/gi,'').trim();
     var parts=result.split(/(?=HAL.HAL YANG HARUS|LANGKAH PERBAIKAN)/i);
     var a1=(parts[0]||result).replace(/.*?ANALISIS DATA DESKRIPTIF[:\s]*/i,'').trim();
     var a2=(parts[1]||'').replace(/.*?HAL.HAL YANG HARUS DITINGKATKAN[:\s]*/i,'').trim();
     var a3=(parts[2]||'').replace(/.*?LANGKAH PERBAIKAN[:\s]*/i,'').trim();
     function wrapPoints(txt,color){
-      var clean=txt.replace(/<[^>]*>/g,'\n').replace(/\n{2,}/g,'\n').trim();
-      var items=clean.split('\n').filter(function(x){return x.trim().length>0;});
+      var items=[];
+      var divs=txt.match(/<div[^>]*>(?:(?!<div)[\s\S])*?<\/div>/gi);
+      if(divs&&divs.length>1){
+        items=divs.map(function(d){ return d.replace(/^<div[^>]*>/i,'').replace(/<\/div>$/i,''); });
+      }else{
+        items=txt.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|li|div)>/gi,'\n').replace(/<[^>]*>/g,'').split('\n');
+      }
+      items=items.map(function(x){ return x.replace(/^\s*\d+[\.\)]\s*/,'').trim(); })
+                 .filter(function(x){ return x.replace(/<[^>]*>/g,'').trim().length>3; });
       if(!items.length) return '';
       return items.map(function(item,i){
-        return '<div style="padding:8px 12px;border-left:3px solid '+color+';margin-bottom:8px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+item.replace(/^\d+[\.\)]\s*/,'').trim()+'</div>';
+        return '<div style="padding:8px 12px;border-left:3px solid '+color+';margin-bottom:8px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+item+'</div>';
       }).join('');
     }
     function wrapAnalisis(txt){
-      var labels=RNG_SEC.filter(function(x){return sec[x.key];}).map(function(x){return x.label.split(' ')[0];});
+      var labels=rngPickedSections(sel).map(function(s){ return s.label.split(' ')[0]; });
       var re=new RegExp('(?=<b>(?:[A-D]\\.\\s*)?(?:'+labels.join('|')+'))','gi');
       var raw=txt.replace(/<div[^>]*>/gi,'').replace(/<\/div>/gi,'\n');
       var chunks=raw.split(re).filter(function(c){return c.trim().length>0;});
@@ -2008,12 +2105,11 @@ async function generateRangeAI(months,sec){
 
 // ---------- AKSI CETAK ----------
 function renderRangeReport(){
-  var months=getRangeMonths(), sec=getRangeSections();
+  var months=getRangeMonths(), sel=getRangeSelection();
   if(!months.length){ rngMsg('Periode belum lengkap. Pilih bulan awal dan bulan akhir.','#C62828'); return null; }
-  if(!RNG_SEC.some(function(x){return sec[x.key];})){ rngMsg('Pilih minimal satu data yang ingin dicetak.','#C62828'); return null; }
-  var host=document.getElementById('rangePdfPreview');
-  host.innerHTML=buildRangeReportHtml(months,sec);
-  return {months:months,sec:sec};
+  if(!rngPickedSections(sel).length){ rngMsg('Pilih minimal satu data yang ingin dicetak.','#C62828'); return null; }
+  document.getElementById('rangePdfPreview').innerHTML=buildRangeReportHtml(months,sel);
+  return {months:months,sel:sel};
 }
 
 async function prepareRangeReport(){
@@ -2022,7 +2118,7 @@ async function prepareRangeReport(){
   var ai=document.getElementById('rngAI');
   if(ai&&ai.checked){
     rngMsg('Menyusun analisa AI sesuai data yang diminta…','#1565C0');
-    await generateRangeAI(r.months,r.sec);
+    await generateRangeAI(r.months,r.sel);
   }else{
     rngMsg('Laporan disusun dengan analisa otomatis.','#555');
   }
@@ -2078,6 +2174,7 @@ async function printRangeReport(btn){
   win.document.close(); win.focus();
   setTimeout(function(){ win.print(); },500);
 }
+
 
 // === CATATAN KEPALA KAS ===
 function getCatatanKey(){ return 'sgm_catatan_'+currentMonth; }
