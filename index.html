@@ -2774,11 +2774,18 @@ async function generateAIAnalysis(){
     var a2=(parts[1]||'').replace(/.*?HAL.HAL YANG HARUS DITINGKATKAN[:\s]*/i,'').trim();
     var a3=(parts[2]||'').replace(/.*?LANGKAH PERBAIKAN[:\s]*/i,'').trim();
     function wrapPoints(txt,color){
-      var clean=txt.replace(/<[^>]*>/g,'\n').replace(/\n{2,}/g,'\n').trim();
-      var items=clean.split('\n').filter(function(l){return l.trim().length>0;});
+      var items=[];
+      var divs=txt.match(/<div[^>]*>(?:(?!<div)[\s\S])*?<\/div>/gi);
+      if(divs&&divs.length>1){
+        items=divs.map(function(d){ return d.replace(/^<div[^>]*>/i,'').replace(/<\/div>$/i,''); });
+      }else{
+        items=txt.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|li|div)>/gi,'\n').replace(/<[^>]*>/g,'').split('\n');
+      }
+      items=items.map(function(x){ return x.replace(/^\s*\d+[\.\)]\s*/,'').trim(); })
+                 .filter(function(x){ return x.replace(/<[^>]*>/g,'').trim().length>3; });
+      if(!items.length) return '';
       return items.map(function(item,i){
-        var t=item.replace(/^\d+[\.\)]\s*/,'').trim();
-        return '<div style="padding:8px 12px;border-left:3px solid '+color+';margin-bottom:8px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+t+'</div>';
+        return '<div style="padding:8px 12px;border-left:3px solid '+color+';margin-bottom:8px;font-size:12px;line-height:1.7"><b>'+(i+1)+'.</b> '+item+'</div>';
       }).join('');
     }
     function wrapAnalisis(txt){
