@@ -2651,7 +2651,7 @@ checkResize();
 // Alamat proxy AI. API key TIDAK pernah disimpan di halaman ini.
 // Isi dengan URL Worker/Function Anda, contoh: 'https://sgm-ai-proxy.namaakun.workers.dev'
 // Untuk uji coba bisa juga diisi lewat konsol: localStorage.setItem('sgm_proxy_url','https://...')
-var AI_PROXY_URL='';
+var AI_PROXY_URL='https://sgm-ai-proxy.sgm-office-proxy.workers.dev';
 function getAiProxyUrl(){
   var override='';
   try{ override=localStorage.getItem('sgm_proxy_url')||''; }catch(e){}

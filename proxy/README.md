@@ -99,10 +99,10 @@ Buka `index.html`, cari baris berikut (sekitar baris 2654):
 var AI_PROXY_URL='';
 ```
 
-Isi dengan URL proxy Anda:
+Sudah terisi dengan proxy yang aktif:
 
 ```js
-var AI_PROXY_URL='https://sgm-ai-proxy.NAMA-AKUN.workers.dev';
+var AI_PROXY_URL='https://sgm-ai-proxy.sgm-office-proxy.workers.dev';
 ```
 
 Commit dan push. URL proxy aman ditulis di sini — yang rahasia adalah key, dan
