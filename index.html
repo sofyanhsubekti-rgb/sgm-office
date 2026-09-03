@@ -7,9 +7,9 @@
 <title>SGM Office – BPR Bank Surya Yudha</title>
 <link rel="manifest" href="manifest.json"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#F0F2F5;color:#1a1a2e;min-height:100vh}
@@ -107,8 +107,8 @@ tr:hover td{background:#FFF8F8}
   #menuBtn{display:block!important}
 }
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -852,6 +852,10 @@ function buildStaffFilterOptions(mod, staff){
 function saveDB(month){
   var syncMonth=month||currentMonth;
   localStorage.setItem('sgm_bpr',JSON.stringify(db));
+  if(typeof navigator!=='undefined' && navigator.onLine===false){
+    alert('Data tersimpan di perangkat ini, tetapi belum terkirim ke server karena tidak ada koneksi internet.' +
+          '\n\nJangan tutup aplikasi sampai koneksi kembali, agar data ikut tersimpan dan terlihat di perangkat lain.');
+  }
   if(db[syncMonth]){
     var d=JSON.parse(JSON.stringify(db[syncMonth]));
     fsDB.collection('sgm_bpr').doc(syncMonth).set(d)
@@ -994,7 +998,12 @@ function switchTab(tab){
 }
 
 var _formDirty=false,_formMonthLoaded='',_formStamp=0;
-function formStampOf(m){ return hashCode(JSON.stringify(db[m]||{})); }
+function stableStr(v){
+  if(v===null||typeof v!=='object') return JSON.stringify(v===undefined?null:v);
+  if(Array.isArray(v)) return '['+v.map(stableStr).join(',')+']';
+  return '{'+Object.keys(v).sort().map(function(k){ return JSON.stringify(k)+':'+stableStr(v[k]); }).join(',')+'}';
+}
+function formStampOf(m){ return hashCode(stableStr(db[m]||{})); }
 function markFormDirty(){ _formDirty=true; }
 function showFormNotice(html){
   var el=document.getElementById('formNotice'); if(!el) return;
@@ -1083,13 +1092,23 @@ function namaKembar(names){
   return '';
 }
 function saveData(){
-  var mm=getModalMonth(); if(!db[mm]) db[mm]={litigasi:[]};
+  var mm=getModalMonth();
+  // Diperiksa lebih dulu, sebelum db[mm] dibuat, agar sidik jari tidak berubah sendiri
+  var berubahDiLuar=(mm===_formMonthLoaded && formStampOf(mm)!==_formStamp);
+  if(!db[mm]) db[mm]={litigasi:[]};
   // Nama kembar akan saling menimpa karena data disimpan per nama petugas
   var cekNama=[
     ['Marketing / Funding',[document.getElementById('f-mkt-s0').value,document.getElementById('f-mkt-s1').value]],
     ['AO Lending',[document.getElementById('f-ao-s0').value,document.getElementById('f-ao-s1').value]],
     ['Remedial',[document.getElementById('f-rem-s0').value,document.getElementById('f-rem-s1').value]]
   ];
+  // Data bulan ini berubah sejak formulir dibuka (mis. disimpan dari perangkat lain)
+  if(berubahDiLuar){
+    if(!confirm('Data bulan '+formatMonthLabel(mm)+' sudah diperbarui dari perangkat atau sesi lain sejak formulir ini dibuka.' +
+      '\n\nBila diteruskan, perubahan tersebut akan tertimpa oleh isi formulir ini.' +
+      '\n\nTekan Batal, lalu gunakan tombol "Muat ulang form" untuk mengambil data terbaru.' +
+      '\n\nTetap simpan?')) return;
+  }
   for(var ci=0;ci<cekNama.length;ci++){
     var kembar=namaKembar(cekNama[ci][1]);
     if(kembar){
@@ -1153,6 +1172,7 @@ function saveData(){
   });
   });
   db[mm].remedial={staff:remNames, perStaff:remPs};
+  _formMonthLoaded=mm; _formStamp=formStampOf(mm); _formDirty=false; showFormNotice('');
   localStorage.removeItem('sgm_ai_'+mm); saveDB(mm); closeModal('inputModal'); renderAll();
 }
 
