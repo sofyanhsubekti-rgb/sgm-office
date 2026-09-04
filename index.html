@@ -106,6 +106,11 @@ tr:hover td{background:#FFF8F8}
   .main-wrap{margin-left:0!important}
   #menuBtn{display:block!important}
 }
+
+/* PRATINJAU LAPORAN */
+#pdfPreview,#rangePdfPreview{overflow-x:auto}
+@media(max-width:768px){#pdfPreview,#rangePdfPreview{padding:14px}}
+@media print{.sidebar,.topbar,.btn,#menuBtn{display:none!important}.main-wrap{margin-left:0!important}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
@@ -468,7 +473,7 @@ tr:hover td{background:#FFF8F8}
           <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8F8F8;border-radius:9px;border:1.5px solid #eee;cursor:pointer"><input type="checkbox" id="pdfRem" checked style="width:auto;accent-color:#C62828"> Remedial</label>
         </div>
         <div style="display:flex;gap:10px">
-          <button class="btn btn-green" onclick="generatePDF()">
+          <button class="btn btn-green" onclick="generatePDF(this)">
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download PDF
           </button>
@@ -1511,7 +1516,7 @@ function buildPdfCharts(){
   cfgs.forEach(function(c){
     var box=document.createElement('div');box.style.cssText='width:340px;height:200px;display:inline-block;';
     var cv=document.createElement('canvas');cv.id=c.id;box.appendChild(cv);wrap.appendChild(box);
-    var ch=new Chart(cv,{type:c.type,data:c.data,options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+    var ch=new Chart(cv,{type:c.type,data:c.data,options:{responsive:true,maintainAspectRatio:false,animation:false,devicePixelRatio:2,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
     try{imgs[c.id]={src:cv.toDataURL('image/png'),label:c.label};}catch(e){}
     ch.destroy();
   });
@@ -1523,9 +1528,172 @@ function pdfChartHtml(imgs){
   var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
   keys.forEach(function(k){
     var d=imgs[k];if(!d||!d.src)return;
-    h+='<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#333;margin-bottom:4px">'+d.label+'</div><img src="'+d.src+'" style="width:100%;max-height:200px;object-fit:contain;border:1px solid #eee;border-radius:6px" /></div>';
+    h+='<div data-atomic style="margin-bottom:12px;page-break-inside:avoid"><div style="font-size:11px;font-weight:700;color:#333;margin-bottom:4px">'+d.label+'</div><img src="'+d.src+'" style="width:100%;height:auto;display:block;border:1px solid #eee;border-radius:6px" /></div>';
   });
   h+='</div>';return h;
+}
+
+/* ============ MESIN CETAK PDF (dipakai laporan bulanan & rentang) ============
+   Laporan dirender di "panggung" offscreen berlebar tetap 740px supaya hasil
+   cetak identik di desktop maupun HP, lalu dipotong per halaman A4 hanya di
+   titik yang aman: tidak membelah baris tabel, grafik, butir analisis, atau
+   memisahkan judul bab dari isinya. */
+var PDF_PAGE={w:210,h:297,mL:12,mR:12,mT:12,mB:16};
+
+function pdfWaitImages(root){
+  var imgs=Array.prototype.slice.call(root.querySelectorAll('img'));
+  return Promise.all(imgs.map(function(im){
+    if(im.complete&&im.naturalWidth>0) return Promise.resolve();
+    return new Promise(function(res){
+      var t=setTimeout(res,3000);
+      im.onload=im.onerror=function(){clearTimeout(t);res();};
+    });
+  }));
+}
+
+function pdfMountStage(html){
+  var old=document.getElementById('pdfStage');
+  if(old&&old.parentNode) old.parentNode.removeChild(old);
+  var st=document.createElement('div');
+  st.id='pdfStage';
+  st.style.cssText='position:fixed;left:-10000px;top:0;width:740px;margin:0;padding:0 0 18px;background:#fff;';
+  st.innerHTML=html;
+  var inner=st.firstElementChild;
+  if(inner) inner.style.maxWidth='740px';
+  document.body.appendChild(st);
+  return st;
+}
+
+function pdfBreakPoints(root){
+  var top=root.getBoundingClientRect().top;
+  var forbid=[];
+  var add=function(el,maxH,pad){
+    var r=el.getBoundingClientRect();
+    if(r.height<=0||r.height>maxH) return;
+    forbid.push([r.top-top,r.bottom-top+(pad||0)]);
+  };
+  // baris tabel, grafik, dan tiap butir analisis tidak boleh terbelah
+  root.querySelectorAll('tr,img,[data-atomic],[data-ai-section]>div').forEach(function(el){ add(el,900); });
+  // tabel pendek dijaga utuh; tabel panjang boleh dipotong antar-baris
+  root.querySelectorAll('table').forEach(function(el){ add(el,520); });
+  // jangan memotong tepat sesudah judul bab
+  root.querySelectorAll('[data-hdr]').forEach(function(el){ add(el,200,70); });
+
+  var safe=function(y){
+    for(var i=0;i<forbid.length;i++){ if(y>forbid[i][0]+1&&y<forbid[i][1]-1) return false; }
+    return true;
+  };
+  var out=[];
+  root.querySelectorAll('div,table,tr,img,p').forEach(function(el){
+    var r=el.getBoundingClientRect();
+    if(r.height<=0) return;
+    var y=r.bottom-top;
+    if(safe(y)) out.push(y);
+  });
+  out.sort(function(a,b){return a-b;});
+  return out;
+}
+
+async function pdfBuild(html,filename,footerLabel){
+  if(!window.html2canvas) throw new Error('html2canvas belum termuat');
+  var jsPDFCtor=(window.jspdf||{}).jsPDF;
+  if(!jsPDFCtor) throw new Error('jsPDF belum termuat');
+  var stage=pdfMountStage(html);
+  try{
+    await pdfWaitImages(stage);
+    var canvas=await html2canvas(stage,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,windowWidth:740,width:740});
+    var P=PDF_PAGE;
+    var contentW=P.w-P.mL-P.mR;          // 186 mm
+    var usableH=P.h-P.mT-P.mB;           // 269 mm
+    var pxPerMm=canvas.width/contentW;
+    var usablePx=usableH*pxPerMm;
+    var k=canvas.width/(stage.offsetWidth||740);
+    var breaks=pdfBreakPoints(stage).map(function(v){return v*k;});
+
+    var pdf=new jsPDFCtor({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+    var y=0,page=0;
+    while(y<canvas.height-2&&page<60){
+      var limit=Math.min(y+usablePx,canvas.height);
+      var cut=limit;
+      if(limit<canvas.height){
+        var best=0;
+        for(var i=0;i<breaks.length;i++){
+          if(breaks[i]>limit) break;
+          if(breaks[i]>best) best=breaks[i];
+        }
+        if(best>y+usablePx*0.35) cut=best;   // jangan bikin halaman terlalu kosong
+      }
+      var sliceH=Math.max(1,Math.round(cut-y));
+      var tmp=document.createElement('canvas');
+      tmp.width=canvas.width; tmp.height=sliceH;
+      var ctx=tmp.getContext('2d');
+      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,tmp.width,tmp.height);
+      ctx.drawImage(canvas,0,y,canvas.width,sliceH,0,0,canvas.width,sliceH);
+      if(page>0) pdf.addPage();
+      pdf.addImage(tmp.toDataURL('image/jpeg',0.92),'JPEG',P.mL,P.mT,contentW,sliceH/pxPerMm);
+      page++; y=cut;
+    }
+    var total=pdf.internal.getNumberOfPages();
+    for(var p=1;p<=total;p++){
+      pdf.setPage(p);
+      pdf.setFontSize(8); pdf.setTextColor(130);
+      pdf.text(String(footerLabel||''),P.mL,P.h-7);
+      pdf.text('Halaman '+p+' dari '+total,P.w-P.mR,P.h-7,{align:'right'});
+    }
+    pdf.save(filename);
+    return total;
+  }finally{
+    if(stage&&stage.parentNode) stage.parentNode.removeChild(stage);
+  }
+}
+
+function pdfPrintCss(){
+  return [
+    '@page{size:A4 portrait;margin:12mm}',
+    '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}',
+    'html,body{margin:0;padding:0;background:#fff}',
+    "body{font-family:'Times New Roman',Times,serif;color:#000;font-size:13px;line-height:1.6}",
+    '#sheet>div{max-width:100%!important;width:100%!important;margin:0!important}',
+    'table{border-collapse:collapse!important;width:100%!important}',
+    'td,th{word-wrap:break-word;overflow-wrap:break-word;vertical-align:top}',
+    'tr{page-break-inside:avoid!important;break-inside:avoid!important}',
+    'thead{display:table-header-group}',
+    'img{max-width:100%!important;height:auto}',
+    '[data-atomic],[data-pdf-block],[data-ai-section]>div{page-break-inside:avoid!important;break-inside:avoid!important}',
+    '[data-hdr]{page-break-after:avoid!important;break-after:avoid!important}',
+    '@media screen{body{background:#e9e9e9;padding:16px}#sheet{background:#fff;width:210mm;max-width:100%;margin:0 auto;padding:12mm;box-shadow:0 2px 14px rgba(0,0,0,.2)}}'
+  ].join('');
+}
+
+/* win harus sudah dibuka SINKRON di dalam event klik, kalau tidak akan
+   diblokir popup blocker. */
+function pdfWritePrintDoc(win,html,title){
+  var base=location.href.split('#')[0];
+  try{
+    win.document.open();
+    win.document.write('<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><base href="'+base+'"><title>'+title+'</title><style>'+pdfPrintCss()+'</style></head><body><div id="sheet">'+html+'</div></body></html>');
+    win.document.close();
+  }catch(e){ console.error('pdfWritePrintDoc:',e); return; }
+
+  var fired=false;
+  var doPrint=function(){ if(fired) return; fired=true; try{ win.focus(); win.print(); }catch(e){} };
+  var imgs=win.document.images, pending=imgs.length;
+  if(!pending){ setTimeout(doPrint,300); }
+  else{
+    var done=function(){ if(--pending<=0) setTimeout(doPrint,300); };
+    for(var i=0;i<imgs.length;i++){
+      if(imgs[i].complete) done();
+      else { imgs[i].onload=done; imgs[i].onerror=done; }
+    }
+  }
+  setTimeout(doPrint,5000);   // pengaman kalau ada gambar gagal dimuat
+}
+
+function pdfOpenWaitWindow(){
+  var win=window.open('','_blank');
+  if(!win) return null;
+  win.document.write('<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Menyiapkan laporan...</title></head><body style="font-family:sans-serif;padding:28px;color:#666">Menyiapkan laporan, mohon tunggu...</body></html>');
+  return win;
 }
 
 
@@ -1924,7 +2092,7 @@ function buildRangeCharts(months,sel){
     var box=document.createElement('div'); box.style.cssText='width:340px;height:200px;display:inline-block;';
     var cv=document.createElement('canvas'); cv.id='rngC'+i; box.appendChild(cv); wrap.appendChild(box);
     try{
-      var ch=new Chart(cv,{type:c.type,data:c.data,options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+      var ch=new Chart(cv,{type:c.type,data:c.data,options:{responsive:true,maintainAspectRatio:false,animation:false,devicePixelRatio:2,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
       imgs.push({src:cv.toDataURL('image/png'),label:c.label});
       ch.destroy();
     }catch(e){}
@@ -1936,7 +2104,7 @@ function rngChartHtml(imgs){
   if(!imgs||!imgs.length) return '';
   var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
   imgs.forEach(function(d){
-    h+='<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#333;margin-bottom:4px">'+d.label+'</div><img src="'+d.src+'" style="width:100%;max-height:200px;object-fit:contain;border:1px solid #eee;border-radius:6px" /></div>';
+    h+='<div data-atomic style="margin-bottom:12px;page-break-inside:avoid"><div style="font-size:11px;font-weight:700;color:#333;margin-bottom:4px">'+d.label+'</div><img src="'+d.src+'" style="width:100%;height:auto;display:block;border:1px solid #eee;border-radius:6px" /></div>';
   });
   return h+'</div>';
 }
@@ -2073,7 +2241,7 @@ function buildRangeReportHtml(months,sel){
     if(s.key==='mkt'&&sel.fld.mktProduk) extra+='<div style="font-size:12px;font-weight:700;margin:12px 0 6px">Rekapitulasi per Produk (akumulasi periode)</div>'+rngTableProduk(months,TD,TH,sf);
     if(s.key==='rem'&&sel.fld.remLitList) extra+=rngTableLitigasi(months,TD,TH);
     extra+=rngNoteHtml((sel.notes||{})[s.key],s.color);
-    body+='<div style="margin-bottom:22px">'+
+    body+='<div data-pdf-block style="margin-bottom:22px">'+
       '<div style="font-size:14px;font-weight:700;background:'+s.color+';color:#fff;padding:6px 12px;margin-bottom:10px;border-radius:2px">'+RNG_ROMAN[n-1]+'. '+s.label.toUpperCase()+'</div>'+
       '<div style="margin-bottom:8px;font-size:12px">'+staffLbl+': <b>'+staffTxt+'</b></div>'+
       rngTable(months,cols,getFn,s.bg,TD,TH)+extra+'</div>';
@@ -2100,7 +2268,7 @@ function buildRangeReportHtml(months,sel){
   }).join(' · ');
 
   return '<div style="max-width:740px;margin:0 auto;font-family:\'Times New Roman\',serif;color:#000;font-size:13px;line-height:1.6">'+
-    '<div style="text-align:center;padding-bottom:14px;margin-bottom:20px;border-bottom:3px double #C62828">'+
+    '<div data-atomic style="text-align:center;padding-bottom:14px;margin-bottom:20px;border-bottom:3px double #C62828">'+
       '<div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px">'+
         '<img src="logo.png" alt="Logo" style="height:56px" onerror="this.style.display=\'none\'"/>'+
         '<div><div style="font-size:19px;font-weight:700;letter-spacing:.8px">BPR. BANK SURYA YUDHA</div>'+
@@ -2112,20 +2280,20 @@ function buildRangeReportHtml(months,sel){
       '<div style="font-size:11px;color:#555;margin-top:3px;line-height:1.5">Cakupan data: '+rincian+'</div>'+
       '<div style="font-size:11px;color:#999;margin-top:4px">Dicetak: '+new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>'+
     '</div>'+
-    (boxHtml?'<div style="margin-bottom:22px;background:#F8F9FA;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px">'+
+    (boxHtml?'<div data-atomic style="margin-bottom:22px;background:#F8F9FA;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px">'+
       '<div style="font-size:13px;font-weight:700;color:#37474F;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Ringkasan Periode</div>'+
       '<div style="display:grid;grid-template-columns:repeat('+Math.max(1,Math.min(boxes.length,4))+',1fr);gap:10px;font-size:11px">'+boxHtml+'</div></div>':'')+
     body+
     '<div style="margin-top:24px;padding-top:16px;border-top:2px solid #C62828">'+
-      '<div style="font-size:14px;font-weight:700;background:#37474F;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n]+'. ANALISIS DATA PERIODE</div>'+
+      '<div data-hdr style="font-size:14px;font-weight:700;background:#37474F;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n]+'. ANALISIS DATA PERIODE</div>'+
       '<div data-rng-ai="analisis" style="font-size:12px;line-height:1.7">'+rngAutoAnalisis(months,sel)+'</div>'+
       (charts.length?'<div style="margin-top:14px"><div style="font-size:12px;font-weight:700;color:#37474F;margin-bottom:8px;border-bottom:1px solid #ddd;padding-bottom:4px">Grafik Tren Periode</div>'+rngChartHtml(charts)+'</div>':'')+
     '</div>'+
-    '<div style="margin-top:18px"><div style="font-size:14px;font-weight:700;background:#E65100;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n+1]+'. HAL-HAL YANG HARUS DITINGKATKAN</div>'+
+    '<div data-pdf-block style="margin-top:18px"><div data-hdr style="font-size:14px;font-weight:700;background:#E65100;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n+1]+'. HAL-HAL YANG HARUS DITINGKATKAN</div>'+
       '<div data-rng-ai="ditingkatkan">'+rngAutoDitingkatkan(months,sel)+'</div></div>'+
-    '<div style="margin-top:18px"><div style="font-size:14px;font-weight:700;background:#1B5E20;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n+2]+'. LANGKAH PERBAIKAN</div>'+
+    '<div data-pdf-block style="margin-top:18px"><div data-hdr style="font-size:14px;font-weight:700;background:#1B5E20;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">'+RNG_ROMAN[n+2]+'. LANGKAH PERBAIKAN</div>'+
       '<div data-rng-ai="perbaikan">'+rngAutoPerbaikan(months,sel)+'</div></div>'+
-    '<div style="margin-top:50px;display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px">'+
+    '<div data-atomic style="margin-top:50px;display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px">'+
       '<div style="text-align:center"><div style="font-weight:600">Mengetahui,</div>'+
         '<div style="margin:52px 0 4px;border-bottom:1px solid #000;display:inline-block;padding-bottom:2px"><b>Rojikin</b></div>'+
         '<div style="font-size:11px;color:#555">Kepala Cabang</div></div>'+
@@ -2332,43 +2500,42 @@ function toggleRangePreview(){
 }
 
 async function downloadRangePDF(btn){
-  var old=btn.innerHTML; btn.disabled=true; btn.textContent='Memproses…';
+  var old=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.textContent='Memproses…'; }
   try{
     var r=await prepareRangeReport();
-    if(!r){ btn.disabled=false; btn.innerHTML=old; return; }
-    var host=document.getElementById('rangePdfPreview');
-    var wasHidden=(host.style.display==='none'||!host.style.display);
-    host.style.display='block';
-    await new Promise(function(res){ setTimeout(res,400); });
-    var canvas=await html2canvas(host,{scale:2,backgroundColor:'#fff',useCORS:true});
-    var jsPDF=window.jspdf.jsPDF;
-    var pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    var w=210, h=canvas.height*w/canvas.width, y=0;
-    var img=canvas.toDataURL('image/jpeg',.95);
-    while(y<h){ if(y>0) pdf.addPage(); pdf.addImage(img,'JPEG',0,-y,w,h); y+=297; }
-    pdf.save('Laporan_BPR_'+r.months[0]+'_sd_'+r.months[r.months.length-1]+'.pdf');
-    if(wasHidden) host.style.display='none';
+    if(!r) return;
+    var f=rngLabel(r.months[0]), l=rngLabel(r.months[r.months.length-1]);
+    await pdfBuild(document.getElementById('rangePdfPreview').innerHTML,
+                   'Laporan_BPR_'+r.months[0]+'_sd_'+r.months[r.months.length-1]+'.pdf',
+                   'Laporan Kinerja Periode Kantor Kas Segamas - '+f+' s.d. '+l);
     rngMsg('PDF berhasil diunduh.','#2E7D32');
   }catch(e){
     console.error('downloadRangePDF:',e);
-    rngMsg('Gagal membuat PDF. Gunakan tombol Print sebagai alternatif.','#C62828');
+    rngMsg('Gagal membuat PDF ('+(e&&e.message?e.message:e)+'). Gunakan tombol Print sebagai alternatif.','#C62828');
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML=old; }
   }
-  btn.disabled=false; btn.innerHTML=old;
 }
 
 async function printRangeReport(btn){
+  // Jendela dibuka SINKRON di dalam event klik, kalau tidak akan diblokir popup blocker.
+  var win=pdfOpenWaitWindow();
+  if(!win){ rngMsg('Popup diblokir browser. Izinkan popup untuk mencetak.','#C62828'); return; }
   var old=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.textContent='Memproses…'; }
-  var r=await prepareRangeReport();
-  if(btn){ btn.disabled=false; btn.innerHTML=old; }
-  if(!r) return;
-  var content=document.getElementById('rangePdfPreview').innerHTML;
-  var win=window.open('','_blank');
-  if(!win){ rngMsg('Popup diblokir browser. Izinkan popup untuk mencetak.','#C62828'); return; }
-  win.document.write('<!DOCTYPE html><html><head><title>Laporan BPR '+rngLabel(r.months[0])+' - '+rngLabel(r.months[r.months.length-1])+'</title>'+
-    '<style>body{font-family:\'Times New Roman\',serif;margin:20mm}@media print{body{margin:10mm}}</style></head><body>'+content+'</body></html>');
-  win.document.close(); win.focus();
-  setTimeout(function(){ win.print(); },500);
+  try{
+    var r=await prepareRangeReport();
+    if(!r){ win.close(); return; }
+    pdfWritePrintDoc(win,document.getElementById('rangePdfPreview').innerHTML,
+                     'Laporan BPR '+rngLabel(r.months[0])+' - '+rngLabel(r.months[r.months.length-1]));
+  }catch(e){
+    console.error('printRangeReport:',e);
+    try{ win.close(); }catch(e2){}
+    rngMsg('Gagal menyiapkan laporan ('+(e&&e.message?e.message:e)+').','#C62828');
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML=old; }
+  }
 }
 
 
@@ -2542,7 +2709,7 @@ function genCatatanHtml(){
   var bagianColors={operasional:'#1565C0',marketing:'#3949AB',lending:'#7B1FA2',remedial:'#C62828'};
   var grouped={};
   list.forEach(function(c){ if(!grouped[c.bagian]) grouped[c.bagian]=[]; grouped[c.bagian].push(c.refined||c.original); });
-  var h='<div style="margin-bottom:22px"><div style="font-size:14px;font-weight:700;background:#0D47A1;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VIII. CATATAN KEPALA KAS</div>';
+  var h='<div data-pdf-block style="margin-bottom:22px"><div data-hdr style="font-size:14px;font-weight:700;background:#0D47A1;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VIII. CATATAN KEPALA KAS</div>';
   Object.keys(grouped).forEach(function(bag){
     var col=bagianColors[bag]||'#555';
     h+='<div style="padding:10px 14px;border-left:3px solid '+col+';margin-bottom:10px;font-size:12px;line-height:1.8;background:#FAFAFA">';
@@ -2587,7 +2754,7 @@ function renderLaporan(){
   document.getElementById('pdfPreview').innerHTML=`
     <div style="max-width:740px;margin:0 auto;font-family:'Times New Roman',serif;color:#000;font-size:13px;line-height:1.6">
       <!-- HEADER -->
-      <div style="text-align:center;padding-bottom:14px;margin-bottom:24px;border-bottom:3px double #C62828">
+      <div data-atomic style="text-align:center;padding-bottom:14px;margin-bottom:24px;border-bottom:3px double #C62828">
         <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px">
           <img src="logo.png" alt="Logo" style="height:56px" onerror="this.style.display='none'"/>
           <div>
@@ -2603,7 +2770,7 @@ function renderLaporan(){
       </div>
 
       <!-- RINGKASAN EKSEKUTIF -->
-      <div style="margin-bottom:22px;background:#F8F9FA;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px">
+      <div data-atomic style="margin-bottom:22px;background:#F8F9FA;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px">
         <div style="font-size:13px;font-weight:700;color:#37474F;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Ringkasan Eksekutif</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;font-size:11px">
           <div style="text-align:center;padding:8px;background:#fff;border-radius:4px;border-left:3px solid #C62828"><div style="color:#888;margin-bottom:4px">Nasabah/Hari</div><div style="font-size:18px;font-weight:800;color:#C62828">${(op.nasabah||0).toFixed(1)}</div>${momLabel(op.nasabah||0,prevOp.nasabah)}</div>
@@ -2614,8 +2781,8 @@ function renderLaporan(){
       </div>
 
       ${document.getElementById('pdfOp')?.checked?`
-      <div style="margin-bottom:22px">
-        <div style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">I. OPERASIONAL KAS</div>
+      <div data-pdf-block style="margin-bottom:22px">
+        <div data-hdr style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">I. OPERASIONAL KAS</div>
         <div style="margin-bottom:8px;font-size:12px">Petugas Operasional: <b>${escHtml(op.staff||'–')}</b> &nbsp;|&nbsp; Hari Kerja: <b>${op.hariKerja||'-'} hari</b></div>
         <table style="width:100%;border-collapse:collapse">
           <tr style="background:#E3F2FD"><td style="${TH};width:45%">Keterangan</td><td style="${TH};text-align:center;width:20%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:20%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:15%">Selisih</td></tr>
@@ -2631,8 +2798,8 @@ function renderLaporan(){
       </div>`:''}
 
       ${document.getElementById('pdfMkt')?.checked?`
-      <div style="margin-bottom:22px">
-        <div style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">II. MARKETING / FUNDING</div>
+      <div data-pdf-block style="margin-bottom:22px">
+        <div data-hdr style="font-size:14px;font-weight:700;background:#1565C0;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">II. MARKETING / FUNDING</div>
         <div style="margin-bottom:8px;font-size:12px">Petugas Funding: <b>${escHtml((mk.staff||[]).filter(Boolean).join(', ')||'–')}</b></div>
         <table style="width:100%;border-collapse:collapse">
           <tr style="background:#E3F2FD"><td style="${TH}">Produk</td><td style="${TH};text-align:center">Target</td><td style="${TH};text-align:center">Realisasi Bln Lalu</td><td style="${TH};text-align:center">Realisasi Bln Ini</td><td style="${TH};text-align:center">Nominal (Rp)</td><td style="${TH};text-align:center">%</td><td style="${TH};text-align:center">MoM</td></tr>
@@ -2650,8 +2817,8 @@ function renderLaporan(){
       </div>`:''}
 
       ${document.getElementById('pdfAO')?.checked?`
-      <div style="margin-bottom:22px">
-        <div style="font-size:14px;font-weight:700;background:#7B1FA2;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">III. AO LENDING</div>
+      <div data-pdf-block style="margin-bottom:22px">
+        <div data-hdr style="font-size:14px;font-weight:700;background:#7B1FA2;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">III. AO LENDING</div>
         <div style="margin-bottom:8px;font-size:12px">Petugas AO Lending: <b>${escHtml((aoMeta.staff||[]).filter(Boolean).join(', ')||'–')}</b></div>
         <table style="width:100%;border-collapse:collapse">
           <tr style="background:#F3E5F5"><td style="${TH};width:40%">Keterangan</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:16%">Selisih</td></tr>
@@ -2682,8 +2849,8 @@ function renderLaporan(){
       </div>`:''}
 
       ${document.getElementById('pdfRem')?.checked?`
-      <div style="margin-bottom:22px">
-        <div style="font-size:14px;font-weight:700;background:#C62828;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">IV. REMEDIAL</div>
+      <div data-pdf-block style="margin-bottom:22px">
+        <div data-hdr style="font-size:14px;font-weight:700;background:#C62828;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">IV. REMEDIAL</div>
         <div style="margin-bottom:8px;font-size:12px">Petugas AO Remedial: <b>${escHtml((remMeta.staff||[]).filter(Boolean).join(', ')||'–')}</b></div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
           <tr style="background:#FFEBEE"><td style="${TH};width:40%">Kolektabilitas</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(prevM)}</td><td style="${TH};text-align:center;width:22%">${formatMonthLabel(currentMonth)}</td><td style="${TH};text-align:center;width:16%">Selisih</td></tr>
@@ -2705,7 +2872,7 @@ function renderLaporan(){
       </div>`:''}
 
       <div style="margin-top:24px;padding-top:16px;border-top:2px solid #C62828">
-        <div style="font-size:14px;font-weight:700;background:#37474F;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">V. ANALISIS DATA DESKRIPTIF</div>
+        <div data-hdr style="font-size:14px;font-weight:700;background:#37474F;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">V. ANALISIS DATA DESKRIPTIF</div>
         <div data-ai-section="analisis" style="font-size:12px;line-height:1.7">${genAnalisis(op,mkCum,aoCum,remCum,pnys,prevOp,prevMkCum,prevAoCum,prevRemCum)}</div>
         <div style="margin-top:14px">
           <div style="font-size:12px;font-weight:700;color:#37474F;margin-bottom:8px;border-bottom:1px solid #ddd;padding-bottom:4px">Grafik Tren Kinerja (6 Bulan Terakhir)</div>
@@ -2713,19 +2880,19 @@ function renderLaporan(){
         </div>
       </div>
 
-      <div style="margin-top:18px">
-        <div style="font-size:14px;font-weight:700;background:#E65100;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VI. HAL-HAL YANG HARUS DITINGKATKAN</div>
+      <div data-pdf-block style="margin-top:18px">
+        <div data-hdr style="font-size:14px;font-weight:700;background:#E65100;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VI. HAL-HAL YANG HARUS DITINGKATKAN</div>
         <div data-ai-section="ditingkatkan">${genDitingkatkan(mkCum,aoCum,remCum,prevMkCum,prevAoCum,prevRemCum)}</div>
       </div>
 
-      <div style="margin-top:18px">
-        <div style="font-size:14px;font-weight:700;background:#1B5E20;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VII. LANGKAH PERBAIKAN</div>
+      <div data-pdf-block style="margin-top:18px">
+        <div data-hdr style="font-size:14px;font-weight:700;background:#1B5E20;color:#fff;padding:6px 12px;margin-bottom:12px;border-radius:2px">VII. LANGKAH PERBAIKAN</div>
         <div data-ai-section="perbaikan">${genPerbaikan(mkCum,aoCum,remCum,prevMkCum,prevAoCum,prevRemCum)}</div>
       </div>
 
       ${genCatatanHtml()}
 
-      <div style="margin-top:50px;display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px">
+      <div data-atomic style="margin-top:50px;display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:12px">
         <div style="text-align:center">
           <div style="font-weight:600">Mengetahui,</div>
           <div style="margin:52px 0 4px;border-bottom:1px solid #000;display:inline-block;padding-bottom:2px"><b>Rojikin</b></div>
@@ -2743,25 +2910,32 @@ function renderLaporan(){
   }catch(e){console.error('renderLaporan:',e);}
 }
 
-async function generatePDF(){
-  const btn=event.target; btn.disabled=true; btn.textContent='Memproses...';
-  renderLaporan(); await new Promise(r=>setTimeout(r,500));
+async function generatePDF(btn){
+  btn=btn||(typeof event!=='undefined'&&event?event.currentTarget:null);
+  var label=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.textContent='Memproses...'; }
   try{
-    const canvas=await html2canvas(document.getElementById('pdfPreview'),{scale:2,backgroundColor:'#fff',useCORS:true});
-    const {jsPDF}=window.jspdf; const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const w=210,h=canvas.height*w/canvas.width; let y=0;
-    while(y<h){ if(y>0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/jpeg',.95),'JPEG',0,-y,w,h); y+=297; }
-    pdf.save(`Laporan_BPR_${currentMonth}.pdf`);
-  }catch(e){ alert('Gagal generate PDF. Gunakan tombol Print sebagai alternatif.'); }
-  btn.disabled=false; btn.innerHTML='<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF';
+    renderLaporan();
+    await new Promise(function(r){setTimeout(r,600);});
+    await pdfBuild(document.getElementById('pdfPreview').innerHTML,
+                   'Laporan_BPR_'+currentMonth+'.pdf',
+                   'Laporan Kinerja Bulanan Kantor Kas Segamas - '+formatMonthLabel(currentMonth));
+  }catch(e){
+    console.error('generatePDF:',e);
+    alert('Gagal generate PDF: '+(e&&e.message?e.message:e)+' - gunakan tombol Print sebagai alternatif.');
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML=label; }
+  }
 }
 
 function printReport(){
+  var win=pdfOpenWaitWindow();
+  if(!win){ alert('Popup diblokir browser. Izinkan popup untuk halaman ini lalu coba lagi.'); return; }
   renderLaporan();
-  const content=document.getElementById('pdfPreview').innerHTML;
-  const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Laporan BPR ${formatMonthLabel(currentMonth)}</title><style>body{font-family:'Times New Roman',serif;margin:20mm}@media print{body{margin:10mm}}</style></head><body>${content}</body></html>`);
-  win.document.close(); win.focus(); setTimeout(()=>win.print(),500);
+  setTimeout(function(){
+    pdfWritePrintDoc(win,document.getElementById('pdfPreview').innerHTML,
+                     'Laporan BPR '+formatMonthLabel(currentMonth));
+  },600);
 }
 
 function checkResize(){
