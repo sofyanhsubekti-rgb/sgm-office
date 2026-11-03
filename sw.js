@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'sgm-office-v78';
+﻿const CACHE_NAME = 'sgm-office-v79';
 const ASSETS = ['./', './index.html', './manifest.json', './logo.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 // Isi cache saat pemasangan supaya aplikasi tetap bisa dibuka tanpa internet.
