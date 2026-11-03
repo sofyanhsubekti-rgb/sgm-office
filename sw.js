@@ -1,5 +1,5 @@
-﻿const CACHE_NAME = 'sgm-office-v74';
-const ASSETS = ['./', './index.html', './manifest.json', './logo.png'];
+﻿const CACHE_NAME = 'sgm-office-v75';
+const ASSETS = ['./', './index.html', './manifest.json', './logo.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 // Isi cache saat pemasangan supaya aplikasi tetap bisa dibuka tanpa internet.
 self.addEventListener('install', e => {

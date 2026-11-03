@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#C62828"/>
 <title>SGM Office – BPR Bank Surya Yudha</title>
 <link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
@@ -384,7 +386,7 @@ tr:hover td{background:#FFF8F8}
     <!-- ===== AO LENDING ===== -->
     <div class="page" id="page-lending">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-        <div class="sec-title"><svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>AO Landing</div>
+        <div class="sec-title"><svg width="22" height="22" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>AO Lending</div>
         <button class="btn btn-red" onclick="openModal('inputModal');switchTab('tab-ao')">+ Input Data</button>
       </div>
       <div class="card" style="border-left:4px solid #1565C0;margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:11px;color:#888;margin-bottom:4px">Petugas AO Lending</div><div style="display:flex;gap:10px" id="aoStaffNames"><span>–</span></div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#888;font-weight:600">Tampilkan:</span><select id="filter-ao" onchange="updateStaffFilter('ao')" style="width:auto;padding:6px 10px;font-size:13px;font-weight:600;border-color:#7B1FA2;color:#7B1FA2;border-radius:8px"><option value="all">Kumulatif (Semua)</option></select></div></div></div>
@@ -453,11 +455,11 @@ tr:hover td{background:#FFF8F8}
         <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:10px">Data MoM Remedial</div>
         <div style="overflow-x:auto"><table><thead><tr><th>Bulan</th><th>KL</th><th>DRG</th><th>Macet</th><th>Total NPL</th><th>Litigasi</th><th>Petugas</th></tr></thead><tbody id="tbodyRem"></tbody></table></div>
       </div>
-      <div class="card" style="border-left:4px solid #C62828">
       <div class="card" style="margin-bottom:14px">
         <div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:10px">Penyelesaian Kredit Bermasalah</div>
         <div id="tbodyPenyelesaian"><div style="color:#aaa;font-size:12px;text-align:center;padding:8px">Belum ada data</div></div>
       </div>
+      <div class="card" style="border-left:4px solid #C62828">
         <div style="font-size:13px;font-weight:700;color:#C62828;margin-bottom:7px">📝 Analisa Remedial</div>
         <div id="analysisRem" style="color:#555;font-size:13.5px;line-height:1.8">–</div>
       </div>
@@ -554,7 +556,7 @@ tr:hover td{background:#FFF8F8}
     <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
       <button class="tab-btn active" id="tab-op" onclick="switchTab('tab-op')">Operasional</button>
       <button class="tab-btn" id="tab-mkt" onclick="switchTab('tab-mkt')">Marketing</button>
-      <button class="tab-btn" id="tab-ao" onclick="switchTab('tab-ao')">AO Landing</button>
+      <button class="tab-btn" id="tab-ao" onclick="switchTab('tab-ao')">AO Lending</button>
       <button class="tab-btn" id="tab-rem" onclick="switchTab('tab-rem')">Remedial</button>
     </div>
 
