@@ -780,6 +780,11 @@ const fsDB=firebase.firestore();
 const PRODUK = ['Tab ATM','Tab Surya','TAS','Tab Kurban','Deposito','Tab Imroh','Tab Haji','THT','Tab Piknik','Tab Simpel'];
 const PRODUK_KEYS = PRODUK.map(p => p.replace(/\s/g,'_'));
 const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+// Seberapa jauh daftar bulan menjangkau ke belakang, dipakai ketiga pemilih
+// bulan (atas, modal input, laporan rentang) supaya jangkauannya tidak
+// berbeda sendiri-sendiri. Dihitung dari bulan berjalan, ditambah satu bulan
+// ke depan untuk menyiapkan data lebih awal.
+const BULAN_MUNDUR = 23;
 
 let db = JSON.parse(localStorage.getItem('sgm_bpr') || '{}');
 let currentMonth = toYM(new Date());
@@ -935,7 +940,7 @@ function init(){
 function buildMonthSelect(){
   const sel=document.getElementById('globalMonth'); sel.innerHTML='';
   const now=new Date();
-  for(let i=11;i>=-1;i--){
+  for(let i=BULAN_MUNDUR;i>=-1;i--){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
     const val=toYM(d);
     const o=document.createElement('option');
@@ -950,7 +955,7 @@ function buildModalMonthSelect(){
   var sel=document.getElementById('modalMonth'); if(!sel) return;
   sel.innerHTML='';
   var now=new Date();
-  for(var i=11;i>=-1;i--){
+  for(var i=BULAN_MUNDUR;i>=-1;i--){
     var d=new Date(now.getFullYear(),now.getMonth()-i,1);
     var val=toYM(d);
     var o=document.createElement('option');
@@ -1975,7 +1980,7 @@ function buildRangeMonthSelects(){
   var from=document.getElementById('rngFrom'), to=document.getElementById('rngTo');
   if(!from||!to) return;
   var keepF=from.value, keepT=to.value, opts='', now=new Date();
-  for(var i=23;i>=-1;i--){
+  for(var i=BULAN_MUNDUR;i>=-1;i--){
     var v=toYM(new Date(now.getFullYear(),now.getMonth()-i,1));
     opts+='<option value="'+v+'">'+formatMonthLabel(v)+'</option>';
   }
