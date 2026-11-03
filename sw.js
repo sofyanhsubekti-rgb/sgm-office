@@ -1,11 +1,17 @@
-﻿const CACHE_NAME = 'sgm-office-v75';
+﻿const CACHE_NAME = 'sgm-office-v76';
 const ASSETS = ['./', './index.html', './manifest.json', './logo.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 // Isi cache saat pemasangan supaya aplikasi tetap bisa dibuka tanpa internet.
+// cache:'reload' memaksa ambil dari jaringan, bukan dari cache HTTP browser.
+// Tanpa itu, versi baru yang dipasang beberapa menit setelah penerbitan akan
+// menyalin halaman LAMA yang masih tersimpan browser (GitHub Pages memasang
+// max-age=600 pada index.html), lalu menyimpannya sebagai cadangan offline.
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(c => Promise.all(ASSETS.map(a => c.add(a).catch(() => {}))))
+      .then(c => Promise.all(ASSETS.map(a =>
+        c.add(new Request(a, { cache: 'reload' })).catch(() => c.add(a).catch(() => {}))
+      )))
       .then(() => self.skipWaiting())
       .catch(() => self.skipWaiting())
   );
